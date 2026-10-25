@@ -1,0 +1,25 @@
+{
+  "name": "com.javienne.startup-diagnostics",
+  "version": "1.0.0",
+  "displayName": "Startup Diagnostics",
+  "description": "Times the cold start of a game, from the start of the process to its first playable screen, and logs it in one line on Android, iOS and in Play Mode.",
+  "unity": "6000.0",
+  "keywords": [
+    "startup",
+    "launch time",
+    "cold start",
+    "performance",
+    "profiling"
+  ],
+  "author": {
+    "name": "Javienne",
+    "url": "https://github.com/Omadel"
+  },
+  "license": "MIT",
+  "documentationUrl": "https://github.com/Omadel/startup-diagnostics#readme",
+  "changelogUrl": "https://github.com/Omadel/startup-diagnostics/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/Omadel/startup-diagnostics/blob/main/LICENSE",
+  "dependencies": {
+    "com.unity.modules.androidjni": "1.0.0"
+  }
+}
