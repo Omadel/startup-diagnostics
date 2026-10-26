@@ -19,7 +19,8 @@ namespace Javienne.StartupDiagnostics
         public BuildTarget Platform = BuildTarget.Android;
 
         /// <summary>
-        ///     The device to measure on: its serial on Android. Empty for the only device plugged in.
+        ///     The device to measure on: its serial on Android, its UDID, identifier or name on iOS. Empty for the only device
+        ///     available.
         /// </summary>
         public string Device;
 
@@ -34,7 +35,8 @@ namespace Javienne.StartupDiagnostics
         public bool Rebuild = true;
 
         /// <summary>
-        ///     The build to measure, an APK or an AAB on Android. Empty for the folder of the package,
+        ///     The build to measure: an APK or an AAB on Android, the folder of the Xcode project on iOS, which the measure
+        ///     builds for the device with xcodebuild. Empty for the folder of the package,
         ///     <c>Build/StartupDiagnostics/&lt;platform&gt;</c>.
         /// </summary>
         public string BuildPath;

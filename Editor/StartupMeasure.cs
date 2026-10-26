@@ -175,7 +175,10 @@ namespace Javienne.StartupDiagnostics
                     result.ApplicationIdentifier = PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android);
                     return new AndroidDevice(AndroidTools.Find(), result.ApplicationIdentifier, settings.Device, Path.Combine(WORK_FOLDER, "Android"));
                 case BuildTarget.iOS:
-                    throw new MeasureException("The measure on iOS is not written yet: measure on Android.");
+                    if (Application.platform != RuntimePlatform.OSXEditor) throw new MeasureException("The measure on iOS needs a Mac with Xcode.");
+
+                    result.ApplicationIdentifier = PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.iOS);
+                    return new IosDevice(result.ApplicationIdentifier, PlayerSettings.iOS.appleDeveloperTeamID, settings.Device, Path.Combine(WORK_FOLDER, "iOS"));
                 default:
                     throw new MeasureException($"The measure runs on Android and iOS, not on {settings.Platform}.");
             }

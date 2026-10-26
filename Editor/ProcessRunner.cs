@@ -23,13 +23,22 @@ namespace Javienne.StartupDiagnostics
         private static bool IsWindows => Environment.OSVersion.Platform == PlatformID.Win32NT;
 
         /// <summary>
-        ///     Runs a tool to its end and returns its exit code and output. Past the timeout, kills it and throws a
-        ///     <see cref="MeasureException" />; on cancellation, kills it and throws an <see cref="OperationCanceledException" />.
+        ///     Runs a tool to its end and returns its exit code and output, with environment variables added to those of the
+        ///     editor if given. Past the timeout, kills it and throws a <see cref="MeasureException" />; on cancellation,
+        ///     kills it and throws an <see cref="OperationCanceledException" />.
         /// </summary>
-        public static async Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> arguments, TimeSpan timeout, CancellationToken cancellation)
+        public static async Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> arguments, TimeSpan timeout, CancellationToken cancellation, IReadOnlyDictionary<string, string> environment = null)
         {
             cancellation.ThrowIfCancellationRequested();
             var info = new ProcessStartInfo(fileName, JoinArguments(arguments, IsWindows)) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+            if (environment != null)
+            {
+                foreach (var variable in environment)
+                {
+                    info.EnvironmentVariables[variable.Key] = variable.Value;
+                }
+            }
+
             using var process = new Process { StartInfo = info, EnableRaisingEvents = true };
             var exited = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             process.Exited += (_, _) => exited.TrySetResult(true);
