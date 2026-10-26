@@ -2,7 +2,7 @@
 
 A Unity package that times the **cold start** of a game, from the start of the process to its first playable screen, on Android, iOS and in Play Mode.
 
-> Work in progress: this README covers the startup timeline and the measure on Android and iOS, from a script or the command line. The window of the measure, the Profiler capture, the launch screen and the optimization guide are coming in 1.0.0.
+> Work in progress: this README covers the startup timeline and the measure on Android and iOS, from its window, a script or the command line. The Profiler capture, the launch screen and the optimization guide are coming in 1.0.0.
 
 ## Requirements
 
@@ -90,6 +90,29 @@ On Android, the device needs USB debugging. The measure uses adb, java and bundl
 
 On iOS, the measure needs a Mac with Xcode, and a device that trusts the Mac with Developer Mode on, plugged in or on the same network. It builds the Xcode project of Unity for devices with `xcodebuild` (Release, signed by the team of *Player Settings › Signing Team ID*, without archive), and drives the device with `devicectl`. It reads the timeline from `startup.txt`, which the game writes in its temporary cache, because the log of an iOS app is out of reach without a debugger. The Xcode of the Applications folder is used when `DEVELOPER_DIR` is not set.
 
+### From the window
+
+Open **Window › Analysis › Startup Diagnostics**.
+
+Under **New measure**, choose the platform, the device (the first available, or one of the devices listed), the number of cold launches, and what to measure:
+
+- **A new build**: builds the game first. Building needs the platform to be the active build target;
+- **The last build**: installs the build already at the path;
+- **The game on the device**: launches the game as installed, without a clean install nor a first launch.
+
+**Measure** checks that the device is there and unlocked, then asks before the clean install, which deletes the data of the game on the device. The measure goes on in the background, with its progress in the progress bar of the editor.
+
+The window shows the newest measure, or an older one chosen in the toolbar, with the device, the build and the commit. For each milestone:
+
+| Column | |
+| --- | --- |
+| First launch | The milestone at the first launch after the clean install, out of the summary. |
+| Median, Min, Max | The milestone over the cold launches, in milliseconds since the start of the process. |
+| Step | The median time since the milestone before it, and its share of the start: the longest bar is the step to look at first. |
+| Previous, Change | The median of the previous measure of the game on the same device, and the change since then. |
+
+A milestone more than 10% slower than in the previous measure is flagged: about twice the spread seen between two series of 10 cold launches of a same build. The **Launches** tab lists the raw values of each launch. The window also follows a measure started from a script or the command line.
+
 ### From a script
 
 ```csharp
@@ -105,9 +128,9 @@ var result = await run.Completion;
 | `Platform` | `Android` | Building needs it to be the active build target. |
 | `Device` | the only one available | The serial of the device on Android; its UDID, identifier or name on iOS. |
 | `Runs` | 10 | Cold launches, after the first launch. |
-| `Rebuild` | `true` | Builds the game first, with the settings of the project, as a non-development build. Otherwise measures the build already at `BuildPath`. |
+| `Rebuild` | `true` | Builds the game first, with the settings of the project, as a non-development build. Otherwise measures the build already at `BuildPath`. A new build needs `CleanInstall`. |
 | `BuildPath` | `Build/StartupDiagnostics/<platform>/<product name>` | An APK or an AAB on Android, after the setting *Build App Bundle*; the folder of the Xcode project on iOS. |
-| `CleanInstall` | `true` | Uninstalls and installs the game, then launches it once, out of the summary. |
+| `CleanInstall` | `true` | Uninstalls and installs the game, then launches it once, out of the summary. Without it, the game installed on the device is measured. |
 | `FirstLaunchWait`, `LaunchWait` | 15 s, 5 s | Time left to the game after the end of its start, before it is killed: the first launch often downloads or caches content. |
 
 `Start` returns at once. The measure writes its progress and its result to a JSON file of `Library/StartupDiagnostics`, `run.ResultPath`: its `Status` goes from `running` to `succeeded`, `failed` (with an `Error`) or `cancelled`. The file holds the device, its OS and its network, the commit of the project, the build, each launch with its milestones and what the OS reports (`am start -W` on Android), and `ColdSummary`. The network of the device is only read on Android. Script reloads wait for the end of the measure. `run.Cancel()`, or the cancel button of the measure in the progress bar of the editor, stops it.
@@ -138,7 +161,7 @@ With the editor of the project closed:
 Unity -batchmode -projectPath <project> -buildTarget Android -executeMethod Javienne.StartupDiagnostics.StartupMeasure.RunFromCommandLine
 ```
 
-Leave out `-quit`: the editor quits at the end of the measure, with the exit code 0 if it succeeded and 1 otherwise. Options: `-startupPlatform android|ios` (the active build target by default), `-startupDevice <id>`, `-startupRuns <N>`, `-startupBuild <path>`, `-startupNoBuild` (measure the build already there) and `-startupNoInstall`.
+Leave out `-quit`: the editor quits at the end of the measure, with the exit code 0 if it succeeded and 1 otherwise. Options: `-startupPlatform android|ios` (the active build target by default), `-startupDevice <id>`, `-startupRuns <N>`, `-startupBuild <path>`, `-startupNoBuild` (measure the build already there) and `-startupNoInstall` (measure the game on the device, without building nor installing it).
 
 ## License
 
