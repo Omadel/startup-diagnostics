@@ -3,6 +3,7 @@
     "rootNamespace": "Javienne.StartupDiagnostics.Tests",
     "references": [
         "Javienne.StartupDiagnostics",
+        "Javienne.StartupDiagnostics.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
