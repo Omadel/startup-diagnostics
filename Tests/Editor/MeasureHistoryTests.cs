@@ -67,6 +67,28 @@ namespace Javienne.StartupDiagnostics.Tests
         }
 
         [Test]
+        public void FindPrevious_ProfilerCaptureBefore_IsLeftOut()
+        {
+            var shown = CreateFile("2026-10-26T09:00:00Z", PIXEL);
+            var capture = CreateFile("2026-10-26T08:00:00Z", PIXEL);
+            capture.Result.ProfilerCapture = true;
+            var previous = CreateFile("2026-10-26T07:00:00Z", PIXEL);
+            var files = new[] { shown, capture, previous };
+
+            Assert.That(MeasureHistory.FindPrevious(files, shown), Is.SameAs(previous));
+        }
+
+        [Test]
+        public void FindPrevious_ProfilerCaptureShown_IsNull()
+        {
+            var shown = CreateFile("2026-10-26T09:00:00Z", PIXEL);
+            shown.Result.ProfilerCapture = true;
+            var files = new[] { shown, CreateFile("2026-10-26T08:00:00Z", PIXEL) };
+
+            Assert.That(MeasureHistory.FindPrevious(files, shown), Is.Null);
+        }
+
+        [Test]
         public void FindPrevious_FirstMeasureOfTheDevice_IsNull()
         {
             var shown = CreateFile("2026-10-26T09:00:00Z", PIXEL);

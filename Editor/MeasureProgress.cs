@@ -4,13 +4,13 @@ namespace Javienne.StartupDiagnostics
 {
     /// <summary>
     ///     How far a measure is, one step at a time: the device check, the build, the install, the first launch, then each
-    ///     cold launch.
+    ///     cold launch, or the Profiler capture.
     /// </summary>
     internal static class MeasureProgress
     {
         public static int CountSteps(MeasureSettings settings)
         {
-            return 1 + (settings.Rebuild ? 1 : 0) + (settings.CleanInstall ? 2 : 0) + Math.Max(0, settings.Runs);
+            return 1 + (settings.Rebuild ? 1 : 0) + (settings.CleanInstall ? 2 : 0) + (settings.ProfilerCapture ? 1 : Math.Max(0, settings.Runs));
         }
 
         /// <summary>

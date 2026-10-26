@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditorInternal;
 using UnityEngine;
 
 namespace Javienne.StartupDiagnostics
@@ -22,7 +24,9 @@ namespace Javienne.StartupDiagnostics
     ///             (<see cref="MeasureSettings.CleanInstall" />);
     ///         </item>
     ///         <item>
-    ///             launches it N times, killed 5 s before each launch, and sums up each milestone over these cold launches.
+    ///             launches it N times, killed 5 s before each launch, and sums up each milestone over these cold launches;
+    ///             or, for a Profiler capture (<see cref="MeasureSettings.ProfilerCapture" />), launches a development build
+    ///             once more to record the Profiler of its start, copies the capture next to the result and opens it.
     ///         </item>
     ///     </list>
     ///     Each measure writes its progress and its result to a JSON file of <see cref="RESULTS_FOLDER" />. Script reloads
@@ -43,6 +47,9 @@ namespace Javienne.StartupDiagnostics
 
         private static readonly TimeSpan _gitTimeout = TimeSpan.FromSeconds(10);
 
+        // The loading of the Load button of the Profiler window, internal: null if a version of Unity changes it.
+        private static readonly MethodInfo _loadProfilingData = typeof(ProfilerWindow).GetMethod("LoadProfilingData", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(bool), typeof(string), typeof(bool) }, null);
+
         /// <summary>
         ///     The last measure started in this editor session, running or done, or null.
         /// </summary>
@@ -59,7 +66,7 @@ namespace Javienne.StartupDiagnostics
             if (IsRunning) throw new InvalidOperationException("A startup measure is already running: wait for its end or cancel it.");
 
             var startedAt = DateTime.UtcNow;
-            var result = new MeasureResult { Platform = settings.Platform.ToString(), StartedAt = startedAt.ToString("o", CultureInfo.InvariantCulture), UnityVersion = Application.unityVersion, Runs = settings.Runs, CleanInstall = settings.CleanInstall };
+            var result = new MeasureResult { Platform = settings.Platform.ToString(), StartedAt = startedAt.ToString("o", CultureInfo.InvariantCulture), UnityVersion = Application.unityVersion, Runs = settings.ProfilerCapture ? 0 : settings.Runs, CleanInstall = settings.CleanInstall, ProfilerCapture = settings.ProfilerCapture, ProfilerSeconds = settings.ProfilerCapture ? settings.ProfilerSeconds : 0 };
             var fileName = startedAt.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "-" + settings.Platform.ToString().ToLowerInvariant() + ".json";
             var run = new MeasureRun(settings, result, Path.Combine(RESULTS_FOLDER, fileName), startedAt);
             Current = run;
@@ -73,8 +80,9 @@ namespace Javienne.StartupDiagnostics
         ///     <c>Unity -batchmode -projectPath &lt;project&gt; -buildTarget Android -executeMethod Javienne.StartupDiagnostics.StartupMeasure.RunFromCommandLine</c>,
         ///     without <c>-quit</c>, which would quit before the measure. Options: <c>-startupPlatform android|ios</c> (the
         ///     active build target by default), <c>-startupDevice &lt;id&gt;</c>, <c>-startupRuns &lt;N&gt;</c>,
-        ///     <c>-startupBuild &lt;path&gt;</c>, <c>-startupNoBuild</c> (measure the build already there) and
-        ///     <c>-startupNoInstall</c> (measure the game on the device, without building nor installing it).
+        ///     <c>-startupBuild &lt;path&gt;</c>, <c>-startupNoBuild</c> (measure the build already there),
+        ///     <c>-startupNoInstall</c> (measure the game on the device, without building nor installing it),
+        ///     <c>-startupProfilerCapture</c> (capture the Profiler instead) and <c>-startupProfilerSeconds &lt;s&gt;</c>.
         /// </summary>
         public static void RunFromCommandLine()
         {
@@ -123,7 +131,7 @@ namespace Javienne.StartupDiagnostics
                 if (settings.Rebuild)
                 {
                     Report(run, progress, "Building");
-                    await MeasureBuild.BuildAsync(settings.Platform, result.BuildPath, cancellation);
+                    await MeasureBuild.BuildAsync(settings.Platform, result.BuildPath, settings.ProfilerCapture, cancellation);
                     result.Rebuilt = true;
                 }
 
@@ -135,7 +143,15 @@ namespace Javienne.StartupDiagnostics
                     result.FirstLaunch = await LaunchAsync(device, settings.FirstLaunchWait, cancellation);
                 }
 
-                for (var i = 0; i < settings.Runs; i++)
+                if (settings.ProfilerCapture)
+                {
+                    Report(run, progress, "Profiler capture");
+                    var capturePath = Path.ChangeExtension(run.ResultPath, StartupProfilerCapture.CAPTURE_EXTENSION).Replace('\\', '/');
+                    result.CaptureLaunch = await Task.Run(() => device.CaptureProfilerAsync(settings.ProfilerSeconds, capturePath, cancellation), cancellation);
+                    result.CapturePath = capturePath;
+                }
+
+                for (var i = 0; i < result.Runs; i++)
                 {
                     Report(run, progress, $"Cold launch {i + 1}/{settings.Runs}");
                     result.ColdLaunches.Add(await LaunchAsync(device, settings.LaunchWait, cancellation));
@@ -168,7 +184,35 @@ namespace Javienne.StartupDiagnostics
             run.Save();
             Progress.Finish(progress, GetProgressStatus(result.Status));
             LogEnd(run);
+            if (result.Status == MeasureStatus.SUCCEEDED && result.ProfilerCapture && !Application.isBatchMode)
+            {
+                OpenProfilerCapture(result.CapturePath);
+            }
+
             return result;
+        }
+
+        /// <summary>
+        ///     Opens a Profiler capture of a measure in the Profiler window, in place of the frames it shows, and stops its
+        ///     recording. Returns false if the capture does not load.
+        /// </summary>
+        public static bool OpenProfilerCapture(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+
+            var fullPath = Path.GetFullPath(path);
+            var window = EditorWindow.GetWindow<ProfilerWindow>();
+            if (_loadProfilingData != null)
+            {
+                // As the Load button of the window, which also stops its recording and shows the name of the file.
+                _loadProfilingData.Invoke(window, new object[] { false, fullPath, false });
+                return ProfilerDriver.lastFrameIndex >= 0;
+            }
+
+            if (!ProfilerDriver.LoadProfile(fullPath, false)) return false;
+
+            ProfilerDriver.enabled = false;
+            return true;
         }
 
         /// <summary>
@@ -191,11 +235,11 @@ namespace Javienne.StartupDiagnostics
 
         /// <summary>
         ///     The build that the measure makes or installs: <see cref="MeasureSettings.BuildPath" />, or the default one of
-        ///     the platform.
+        ///     the platform, development for a Profiler capture.
         /// </summary>
         internal static string GetBuildPath(MeasureSettings settings)
         {
-            return string.IsNullOrEmpty(settings.BuildPath) ? MeasureBuild.GetDefaultPath(settings.Platform) : settings.BuildPath;
+            return string.IsNullOrEmpty(settings.BuildPath) ? MeasureBuild.GetDefaultPath(settings.Platform, settings.ProfilerCapture) : settings.BuildPath;
         }
 
         internal static string GetApplicationIdentifier(BuildTarget platform)
@@ -275,6 +319,9 @@ namespace Javienne.StartupDiagnostics
             var result = run.Result;
             switch (result.Status)
             {
+                case MeasureStatus.SUCCEEDED when result.ProfilerCapture:
+                    Debug.Log($"{LOG_PREFIX} Profiler capture done on {result.DeviceModel}: {result.CapturePath}");
+                    break;
                 case MeasureStatus.SUCCEEDED:
                     var end = result.ColdSummary.LastOrDefault(summary => summary.Name != MilestoneSummary.OS_FIRST_FRAME);
                     var median = end == null ? string.Empty : $", {end.Name} median {end.Median:0} ms over {result.ColdLaunches.Count} cold launches";

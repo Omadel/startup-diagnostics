@@ -38,5 +38,11 @@ namespace Javienne.StartupDiagnostics
         ///     Kills the game, launches it, and returns its timeline once the start has ended; kills it again after the wait.
         /// </summary>
         Task<Launch> LaunchAsync(TimeSpan waitAfterEnd, CancellationToken cancellation);
+
+        /// <summary>
+        ///     Kills the game, asks it for a Profiler capture of its start, launches it, and copies the capture from the
+        ///     device to the path once complete; then kills it again. Returns its timeline.
+        /// </summary>
+        Task<Launch> CaptureProfilerAsync(float seconds, string capturePath, CancellationToken cancellation);
     }
 }

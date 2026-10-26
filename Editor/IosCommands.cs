@@ -24,6 +24,12 @@ namespace Javienne.StartupDiagnostics
         public const string STARTUP_FILE = "Library/Caches/" + StartupTimeline.FILE_NAME;
 
         /// <summary>
+        ///     The folder of <see cref="Application.persistentDataPath" /> in the data container of the app, where the
+        ///     files of the Profiler capture go.
+        /// </summary>
+        public const string DATA_FOLDER = "Documents/";
+
+        /// <summary>
         ///     The devicectl error of a connection to the device that could not be established, often passing over the
         ///     local network: worth another try.
         /// </summary>

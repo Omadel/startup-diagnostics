@@ -80,6 +80,32 @@ namespace Javienne.StartupDiagnostics.Tests
         }
 
         [Test]
+        public void GetBlockingIssue_ProfilerCapture_IgnoresTheColdLaunches()
+        {
+            var settings = new MeasureSettings { ProfilerCapture = true, Runs = 0 };
+
+            Assert.That(MeasureChecks.GetBlockingIssue(settings, BUILD, false, BuildTarget.Android, false), Is.Null);
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        public void GetBlockingIssue_ProfilerCaptureWithoutSeconds_IsRefused(float seconds)
+        {
+            var settings = new MeasureSettings { ProfilerCapture = true, ProfilerSeconds = seconds };
+
+            Assert.That(MeasureChecks.GetBlockingIssue(settings, BUILD, false, BuildTarget.Android, false), Is.EqualTo("The Profiler capture lasts more than 0 s."));
+        }
+
+        [Test]
+        public void GetConfirmation_ProfilerCapture_NamesTheDevelopmentBuildAndTheCapture()
+        {
+            var confirmation = MeasureChecks.GetConfirmation(new MeasureSettings { ProfilerCapture = true, ProfilerSeconds = 6.5f }, "com.javienne.rouflac", "Pixel 6", BUILD);
+
+            Assert.That(confirmation, Does.StartWith($"The measure builds a development build to {BUILD}, uninstalls com.javienne.rouflac from Pixel 6, which deletes its data on the device, installs the new build and launches it once, then once more to capture the Profiler for 6.5 s."));
+        }
+
+        [Test]
         public void GetConfirmation_NewBuild_NamesTheGameTheDeviceAndTheLaunches()
         {
             var confirmation = MeasureChecks.GetConfirmation(new MeasureSettings { Runs = 10 }, "com.javienne.rouflac", "Pixel 6", BUILD);

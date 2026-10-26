@@ -68,6 +68,8 @@ namespace Javienne.StartupDiagnostics
         private DropdownField _sourceField;
         private VisualElement _buildRow;
         private TextField _buildField;
+        private Toggle _captureField;
+        private FloatField _captureSecondsField;
         private FloatField _firstLaunchWaitField;
         private FloatField _launchWaitField;
         private HelpBox _issueBox;
@@ -77,6 +79,9 @@ namespace Javienne.StartupDiagnostics
         private Label _details;
         private HelpBox _statusBox;
         private HelpBox _comparisonBox;
+        private VisualElement _captureRow;
+        private HelpBox _captureBox;
+        private Button _openCaptureButton;
         private MultiColumnListView _milestoneList;
         private Tab _launchesTab;
         private MultiColumnListView _launchList;
@@ -200,7 +205,7 @@ namespace Javienne.StartupDiagnostics
             _runsField.RegisterValueChangedCallback(change => _settings.Runs = change.newValue);
             _settingsPanel.Add(_runsField);
 
-            _sourceField = new DropdownField("Measure", _sourceChoices, 0) { tooltip = "A new build: builds the game with the settings of the project, as a non-development build, then installs it.\nThe last build: installs the build already there.\nThe game on the device: launches the game as installed, without a clean install nor a first launch." };
+            _sourceField = new DropdownField("Measure", _sourceChoices, 0) { tooltip = "A new build: builds the game with the settings of the project, as a non-development build, or a development build for a Profiler capture, then installs it.\nThe last build: installs the build already there.\nThe game on the device: launches the game as installed, without a clean install nor a first launch." };
             _sourceField.RegisterValueChangedCallback(change =>
             {
                 _settings.Rebuild = _sourceField.index == SOURCE_NEW_BUILD;
@@ -216,6 +221,17 @@ namespace Javienne.StartupDiagnostics
             _buildRow.Add(_buildField);
             _buildRow.Add(new Button(BrowseBuild) { text = "…", tooltip = "Chooses the build." });
             _settingsPanel.Add(_buildRow);
+
+            _captureField = new Toggle("Profiler capture") { tooltip = "Captures the Profiler instead of timing cold launches: a development build, launched once more after the first launch, records the Profiler from its first scripts. The capture opens in the Profiler window." };
+            _captureField.RegisterValueChangedCallback(change =>
+            {
+                _settings.ProfilerCapture = change.newValue;
+                UpdateSettingsFields();
+            });
+            _settingsPanel.Add(_captureField);
+            _captureSecondsField = new FloatField("Capture (s)") { isDelayed = true, tooltip = "Seconds of the capture, from the first scripts." };
+            _captureSecondsField.RegisterValueChangedCallback(change => _settings.ProfilerSeconds = change.newValue);
+            _settingsPanel.Add(_captureSecondsField);
 
             var waits = new Foldout { text = "Waits", value = false };
             _firstLaunchWaitField = new FloatField("After the first launch (s)") { isDelayed = true, tooltip = "Time left to the game after the end of its start at the first launch, before it is killed: the first launch often downloads or caches content that the next launches use." };
@@ -249,6 +265,12 @@ namespace Javienne.StartupDiagnostics
             _result.Add(_statusBox);
             _comparisonBox = new HelpBox(string.Empty, HelpBoxMessageType.Info);
             _result.Add(_comparisonBox);
+            _captureRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
+            _captureBox = new HelpBox(string.Empty, HelpBoxMessageType.Info) { style = { flexGrow = 1, flexShrink = 1 } };
+            _openCaptureButton = new Button(OpenShownCapture) { text = "Open in Profiler", tooltip = "Loads the capture in the Profiler window, in place of the frames it shows." };
+            _captureRow.Add(_captureBox);
+            _captureRow.Add(_openCaptureButton);
+            _result.Add(_captureRow);
 
             var tabs = new TabView { style = { flexGrow = 1, marginTop = 4 } };
             tabs.contentContainer.style.flexGrow = 1;
@@ -418,6 +440,7 @@ namespace Javienne.StartupDiagnostics
             _comparisonBox.text = comparison.Message;
             _comparisonBox.messageType = comparison.IsWarning ? HelpBoxMessageType.Warning : HelpBoxMessageType.Info;
             _comparisonBox.style.display = hasCold ? DisplayStyle.Flex : DisplayStyle.None;
+            UpdateCapture(result);
 
             if (result.HasFirstLaunch)
             {
@@ -429,7 +452,35 @@ namespace Javienne.StartupDiagnostics
                 _launches.Add(new LaunchRow { Label = (i + 1).ToString(CultureInfo.InvariantCulture), Launch = result.ColdLaunches[i] });
             }
 
+            if (result.CaptureLaunch != null && result.CaptureLaunch.Milestones.Count > 0)
+            {
+                _launches.Add(new LaunchRow { Label = "Capture", Launch = result.CaptureLaunch });
+            }
+
             UpdateLaunchList();
+        }
+
+        private void UpdateCapture(MeasureResult result)
+        {
+            var hasCapture = result.ProfilerCapture && !string.IsNullOrEmpty(result.CapturePath);
+            _captureRow.style.display = hasCapture ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!hasCapture) return;
+
+            var exists = File.Exists(result.CapturePath);
+            _captureBox.text = exists ? $"Profiler capture of the first {FormatSeconds(result.ProfilerSeconds)} of the start, in a development build, slower to start than the game: {result.CapturePath}" : $"The Profiler capture is no longer at {result.CapturePath}.";
+            _openCaptureButton.SetEnabled(exists);
+        }
+
+        private void OpenShownCapture()
+        {
+            if (_shown == null || StartupMeasure.OpenProfilerCapture(_shown.Result.CapturePath)) return;
+
+            EditorUtility.DisplayDialog(TITLE, $"Unable to open the Profiler capture {_shown.Result.CapturePath}.", "OK");
+        }
+
+        private static string FormatSeconds(float seconds)
+        {
+            return seconds.ToString("0.#", CultureInfo.InvariantCulture) + " s";
         }
 
         private void UpdateStatus(MeasureResult result)
@@ -513,7 +564,7 @@ namespace Javienne.StartupDiagnostics
                 build += " " + result.BuildPath;
             }
 
-            var launches = $"{result.ColdLaunches.Count} of {result.Runs} cold launches" + (result.CleanInstall ? " after a clean install" : string.Empty);
+            var launches = (result.ProfilerCapture ? $"Profiler capture of {FormatSeconds(result.ProfilerSeconds)}" : $"{result.ColdLaunches.Count} of {result.Runs} cold launches") + (result.CleanInstall ? " after a clean install" : string.Empty);
             var duration = MeasureHistory.GetDuration(result);
             var started = "Started " + MeasureHistory.FormatStartedAt(result, TimeZoneInfo.Local) + (duration.HasValue ? ", took " + MeasureReport.FormatDuration(duration.Value) : string.Empty);
             var lines = new[] { string.IsNullOrEmpty(device) ? result.Platform : $"{result.Platform} · {device}", $"{result.ApplicationIdentifier} · {build}" + (string.IsNullOrEmpty(result.Commit) ? string.Empty : $" · commit {result.Commit}") + $" · Unity {result.UnityVersion}", $"{launches} · {started}" };
@@ -524,7 +575,7 @@ namespace Javienne.StartupDiagnostics
         {
             var result = file.Result;
             var device = string.IsNullOrEmpty(result.DeviceModel) ? result.Platform : result.DeviceModel;
-            return (newest ? "Newest: " : string.Empty) + $"{MeasureHistory.FormatStartedAt(result, TimeZoneInfo.Local)} · {device} · {result.Status}";
+            return (newest ? "Newest: " : string.Empty) + $"{MeasureHistory.FormatStartedAt(result, TimeZoneInfo.Local)} · {device}" + (result.ProfilerCapture ? " · Profiler capture" : string.Empty) + $" · {result.Status}";
         }
 
         private static string GetPreviousLabel(MeasureResult result)
@@ -568,6 +619,10 @@ namespace Javienne.StartupDiagnostics
         {
             _platformField.SetValueWithoutNotify(_settings.Platform == BuildTarget.iOS ? _platformChoices[1] : _platformChoices[0]);
             _runsField.SetValueWithoutNotify(_settings.Runs);
+            _runsField.style.display = _settings.ProfilerCapture ? DisplayStyle.None : DisplayStyle.Flex;
+            _captureField.SetValueWithoutNotify(_settings.ProfilerCapture);
+            _captureSecondsField.SetValueWithoutNotify(_settings.ProfilerSeconds);
+            _captureSecondsField.style.display = _settings.ProfilerCapture ? DisplayStyle.Flex : DisplayStyle.None;
             _sourceField.SetValueWithoutNotify(_sourceChoices[_settings.Rebuild ? SOURCE_NEW_BUILD : _settings.CleanInstall ? SOURCE_LAST_BUILD : SOURCE_INSTALLED_GAME]);
             _buildRow.style.display = _settings.Rebuild || _settings.CleanInstall ? DisplayStyle.Flex : DisplayStyle.None;
             _buildField.SetValueWithoutNotify(_settings.BuildPath ?? string.Empty);
@@ -592,8 +647,8 @@ namespace Javienne.StartupDiagnostics
             _issueBox.style.display = issue == null || busy ? DisplayStyle.None : DisplayStyle.Flex;
             _settingsPanel.SetEnabled(!busy);
             _measureButton.SetEnabled(issue == null && !busy);
-            _measureButton.text = _checking != null ? "Checking the device…" : running ? "Measuring…" : "Measure";
-            _buildField.textEdition.placeholder = MeasureBuild.GetDefaultPath(_settings.Platform).Replace('\\', '/');
+            _measureButton.text = _checking != null ? "Checking the device…" : running ? "Measuring…" : _settings.ProfilerCapture ? "Capture" : "Measure";
+            _buildField.textEdition.placeholder = MeasureBuild.GetDefaultPath(_settings.Platform, _settings.ProfilerCapture).Replace('\\', '/');
             UpdateProgress();
         }
 

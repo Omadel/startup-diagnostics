@@ -17,6 +17,8 @@ namespace Javienne.StartupDiagnostics
         public const string BUILD = "-startupBuild";
         public const string NO_BUILD = "-startupNoBuild";
         public const string NO_INSTALL = "-startupNoInstall";
+        public const string PROFILER_CAPTURE = "-startupProfilerCapture";
+        public const string PROFILER_SECONDS = "-startupProfilerSeconds";
 
         /// <summary>
         ///     The settings from the arguments, on the active build target by default. Throws a
@@ -48,6 +50,12 @@ namespace Javienne.StartupDiagnostics
                         settings.CleanInstall = false;
                         settings.Rebuild = false;
                         break;
+                    case PROFILER_CAPTURE:
+                        settings.ProfilerCapture = true;
+                        break;
+                    case PROFILER_SECONDS:
+                        settings.ProfilerSeconds = ParseSeconds(GetValue(arguments, ref i));
+                        break;
                 }
             }
 
@@ -75,6 +83,13 @@ namespace Javienne.StartupDiagnostics
             if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var runs) && runs > 0) return runs;
 
             throw new MeasureException($"{RUNS} {value}: the number of cold launches is a whole number above 0.");
+        }
+
+        private static float ParseSeconds(string value)
+        {
+            if (float.TryParse(value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var seconds) && seconds > 0) return seconds;
+
+            throw new MeasureException($"{PROFILER_SECONDS} {value}: the Profiler capture lasts a number of seconds above 0.");
         }
     }
 }

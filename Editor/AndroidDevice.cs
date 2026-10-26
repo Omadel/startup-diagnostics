@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +21,7 @@ namespace Javienne.StartupDiagnostics
         private static readonly TimeSpan _commandTimeout = TimeSpan.FromSeconds(30);
         private static readonly TimeSpan _launchTimeout = TimeSpan.FromSeconds(60);
         private static readonly TimeSpan _installTimeout = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan _pullTimeout = TimeSpan.FromMinutes(5);
 
         private readonly AndroidTools _tools;
         private readonly string _package;
@@ -78,6 +80,35 @@ namespace Javienne.StartupDiagnostics
 
         public async Task<Launch> LaunchAsync(TimeSpan waitAfterEnd, CancellationToken cancellation)
         {
+            var launch = await StartAsync(cancellation);
+            await Task.Delay(waitAfterEnd, cancellation);
+            await ShellAsync(cancellation, "am", "force-stop", _package);
+            return launch;
+        }
+
+        public async Task<Launch> CaptureProfilerAsync(float seconds, string capturePath, CancellationToken cancellation)
+        {
+            var folder = AndroidCommands.GetDataFolder(_package);
+            var request = Path.GetFullPath(Path.Combine(_workFolder, StartupProfilerCapture.REQUEST_FILE));
+            Directory.CreateDirectory(_workFolder);
+            File.WriteAllText(request, seconds.ToString(CultureInfo.InvariantCulture));
+            await ShellAsync(cancellation, "mkdir", "-p", folder);
+            await ShellAsync(cancellation, "rm", "-f", $"{folder}/{StartupProfilerCapture.CAPTURE_FILE}", $"{folder}/{StartupProfilerCapture.DONE_FILE}");
+            await ProcessRunner.RunCheckedAsync(_tools.Adb, AndroidCommands.Push(Id, request, $"{folder}/{StartupProfilerCapture.REQUEST_FILE}"), _commandTimeout, cancellation);
+            var launch = await StartAsync(cancellation);
+            await WaitForCaptureAsync(folder, seconds, cancellation);
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(capturePath)));
+            await ProcessRunner.RunCheckedAsync(_tools.Adb, AndroidCommands.Pull(Id, $"{folder}/{StartupProfilerCapture.CAPTURE_FILE}", Path.GetFullPath(capturePath)), _pullTimeout, cancellation);
+            await ShellAsync(cancellation, "am", "force-stop", _package);
+            return launch;
+        }
+
+        /// <summary>
+        ///     Kills the game, launches it after the pause, and returns its timeline once the start has ended, with what the
+        ///     OS reports.
+        /// </summary>
+        private async Task<Launch> StartAsync(CancellationToken cancellation)
+        {
             var activity = await GetActivityAsync(cancellation);
             await CheckUnlockedAsync(cancellation);
             await ShellAsync(cancellation, "am", "force-stop", _package);
@@ -85,8 +116,6 @@ namespace Javienne.StartupDiagnostics
             await ProcessRunner.RunAsync(_tools.Adb, AndroidCommands.ClearLog(Id), _commandTimeout, cancellation);
             var report = await ProcessRunner.RunCheckedAsync(_tools.Adb, AndroidCommands.Shell(Id, "am", "start", "-W", "-n", activity), _launchTimeout, cancellation);
             var launch = await WaitForTimelineAsync(cancellation);
-            await Task.Delay(waitAfterEnd, cancellation);
-            await ShellAsync(cancellation, "am", "force-stop", _package);
             AndroidCommands.ReadLaunchReport(report, launch);
             return launch;
         }
@@ -120,6 +149,23 @@ namespace Javienne.StartupDiagnostics
                 var log = await ProcessRunner.RunAsync(_tools.Adb, AndroidCommands.ReadUnityLog(Id), _commandTimeout, cancellation);
                 if (StartupLine.TryParseLast(log.Output, out var launch)) return launch;
                 if (waiting.Elapsed.TotalSeconds > STARTUP_TIMEOUT_SECONDS) throw new MeasureException($"No {StartupTimeline.LOG_PREFIX} line within {STARTUP_TIMEOUT_SECONDS} s: keep the device unlocked with its screen on, and check that the build has the Startup Diagnostics package.");
+
+                await Task.Delay(POLL_MILLISECONDS, cancellation);
+            }
+        }
+
+        /// <summary>
+        ///     Waits for the game to write the end of its Profiler capture, a few seconds after its start.
+        /// </summary>
+        private async Task WaitForCaptureAsync(string folder, float seconds, CancellationToken cancellation)
+        {
+            var waiting = Stopwatch.StartNew();
+            var timeout = seconds + STARTUP_TIMEOUT_SECONDS;
+            while (true)
+            {
+                var done = await ProcessRunner.RunAsync(_tools.Adb, AndroidCommands.Shell(Id, "cat", $"{folder}/{StartupProfilerCapture.DONE_FILE}"), _commandTimeout, cancellation);
+                if (done.ExitCode == 0 && done.Output.Trim() == StartupProfilerCapture.DONE_CONTENT) return;
+                if (waiting.Elapsed.TotalSeconds > timeout) throw new MeasureException($"No Profiler capture within {timeout:0} s: the game on the device must be a development build with the Startup Diagnostics package.");
 
                 await Task.Delay(POLL_MILLISECONDS, cancellation);
             }

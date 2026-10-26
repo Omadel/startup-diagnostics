@@ -147,6 +147,19 @@ namespace Javienne.StartupDiagnostics.Tests
         }
 
         [Test]
+        public void GetDataFolder_Package_IsItsFilesFolderOnTheSharedStorage()
+        {
+            Assert.That(AndroidCommands.GetDataFolder("com.javienne.rouflac"), Is.EqualTo("/sdcard/Android/data/com.javienne.rouflac/files"));
+        }
+
+        [Test]
+        public void PushAndPull_Files_CopyThemToAndFromTheDevice()
+        {
+            Assert.That(AndroidCommands.Push(SERIAL, "/work/request.txt", "/sdcard/request.txt"), Is.EqualTo(new[] { "-s", SERIAL, "push", "/work/request.txt", "/sdcard/request.txt" }));
+            Assert.That(AndroidCommands.Pull(SERIAL, "/sdcard/capture.raw", "/project/capture.raw"), Is.EqualTo(new[] { "-s", SERIAL, "pull", "/sdcard/capture.raw", "/project/capture.raw" }));
+        }
+
+        [Test]
         public void BuildDeviceApks_Aab_MakesTheApksOfTheConnectedDevice()
         {
             var arguments = AndroidCommands.BuildDeviceApks("/tools/bundletool.jar", "/build/Game.aab", "/work/device.apks", "/sdk/adb", SERIAL);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -87,21 +88,51 @@ namespace Javienne.StartupDiagnostics
 
         public async Task<Launch> LaunchAsync(TimeSpan waitAfterEnd, CancellationToken cancellation)
         {
+            var timeline = await StartAsync(cancellation);
+            await Task.Delay(waitAfterEnd, cancellation);
+            await TerminateAsync(cancellation);
+            return timeline;
+        }
+
+        public async Task<Launch> CaptureProfilerAsync(float seconds, string capturePath, CancellationToken cancellation)
+        {
+            var request = Path.Combine(_workFolder, StartupProfilerCapture.REQUEST_FILE);
+            File.WriteAllText(request, seconds.ToString(CultureInfo.InvariantCulture));
+            // devicectl does not delete files: the end of an older capture is emptied instead.
+            await DevicectlAsync(IosCommands.CopyTo(Id, _bundleId, GetEmptyFile(), IosCommands.DATA_FOLDER + StartupProfilerCapture.DONE_FILE), false, cancellation);
+            await DevicectlAsync(IosCommands.CopyTo(Id, _bundleId, request, IosCommands.DATA_FOLDER + StartupProfilerCapture.REQUEST_FILE), true, cancellation);
+            var timeline = await StartAsync(cancellation);
+            await WaitForCaptureAsync(seconds, cancellation);
+            var fullPath = Path.GetFullPath(capturePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+            File.Delete(fullPath);
+            await DevicectlAsync(IosCommands.CopyFrom(Id, _bundleId, IosCommands.DATA_FOLDER + StartupProfilerCapture.CAPTURE_FILE, fullPath), true, _installTimeout, cancellation);
+            await TerminateAsync(cancellation);
+            return timeline;
+        }
+
+        /// <summary>
+        ///     Kills the game, launches it after the pause, and returns its timeline once the start has ended.
+        /// </summary>
+        private async Task<Launch> StartAsync(CancellationToken cancellation)
+        {
             await CheckUnlockedAsync(cancellation);
             await TerminateAsync(cancellation);
-            var empty = Path.Combine(_workFolder, EMPTY_FILE);
-            File.WriteAllText(empty, string.Empty);
-            await DevicectlAsync(IosCommands.CopyTo(Id, _bundleId, empty, IosCommands.STARTUP_FILE), false, cancellation);
+            await DevicectlAsync(IosCommands.CopyTo(Id, _bundleId, GetEmptyFile(), IosCommands.STARTUP_FILE), false, cancellation);
             await Task.Delay(StartupMeasure.PAUSE_BEFORE_LAUNCH_MILLISECONDS, cancellation);
             var launch = await DevicectlAsync(IosCommands.Launch(Id, _bundleId), false, cancellation);
             var error = IosCommands.GetError(launch);
             if (error != null) throw new MeasureException($"Unable to launch {_bundleId} on the iOS device: {error}. Is it installed? Measure with a clean install.");
 
             _processId = launch.result?.process?.processIdentifier ?? -1;
-            var timeline = await WaitForTimelineAsync(cancellation);
-            await Task.Delay(waitAfterEnd, cancellation);
-            await TerminateAsync(cancellation);
-            return timeline;
+            return await WaitForTimelineAsync(cancellation);
+        }
+
+        private string GetEmptyFile()
+        {
+            var empty = Path.Combine(_workFolder, EMPTY_FILE);
+            File.WriteAllText(empty, string.Empty);
+            return empty;
         }
 
         /// <summary>
@@ -157,6 +188,25 @@ namespace Javienne.StartupDiagnostics
                 await DevicectlAsync(IosCommands.CopyFrom(Id, _bundleId, IosCommands.STARTUP_FILE, local), false, cancellation);
                 if (File.Exists(local) && StartupLine.TryParseLast(File.ReadAllText(local), out var launch)) return launch;
                 if (waiting.Elapsed.TotalSeconds > STARTUP_TIMEOUT_SECONDS) throw new MeasureException($"No {StartupTimeline.LOG_PREFIX} timeline in {StartupTimeline.FILE_NAME} within {STARTUP_TIMEOUT_SECONDS} s: keep the device unlocked with its screen on, and check that the build has the Startup Diagnostics package.");
+
+                await Task.Delay(POLL_MILLISECONDS, cancellation);
+            }
+        }
+
+        /// <summary>
+        ///     Waits for the game to write the end of its Profiler capture, a few seconds after its start.
+        /// </summary>
+        private async Task WaitForCaptureAsync(float seconds, CancellationToken cancellation)
+        {
+            var local = Path.Combine(_workFolder, StartupProfilerCapture.DONE_FILE);
+            var waiting = Stopwatch.StartNew();
+            var timeout = seconds + STARTUP_TIMEOUT_SECONDS;
+            while (true)
+            {
+                File.Delete(local);
+                await DevicectlAsync(IosCommands.CopyFrom(Id, _bundleId, IosCommands.DATA_FOLDER + StartupProfilerCapture.DONE_FILE, local), false, cancellation);
+                if (File.Exists(local) && File.ReadAllText(local).Trim() == StartupProfilerCapture.DONE_CONTENT) return;
+                if (waiting.Elapsed.TotalSeconds > timeout) throw new MeasureException($"No Profiler capture within {timeout:0} s: the game on the device must be a development build with the Startup Diagnostics package.");
 
                 await Task.Delay(POLL_MILLISECONDS, cancellation);
             }

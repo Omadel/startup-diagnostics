@@ -125,6 +125,24 @@ namespace Javienne.StartupDiagnostics
             return network.Groups[1].Value == "none" ? MeasureResult.NETWORK_OFFLINE : MeasureResult.NETWORK_ONLINE;
         }
 
+        /// <summary>
+        ///     The persistent data path of the game on the device, where adb reads and writes.
+        /// </summary>
+        public static string GetDataFolder(string package)
+        {
+            return $"/sdcard/Android/data/{package}/files";
+        }
+
+        public static string[] Push(string serial, string local, string remote)
+        {
+            return new[] { "-s", serial, "push", local, remote };
+        }
+
+        public static string[] Pull(string serial, string remote, string local)
+        {
+            return new[] { "-s", serial, "pull", remote, local };
+        }
+
         public static string[] Shell(string serial, params string[] command)
         {
             return new[] { "-s", serial, "shell" }.Concat(command).ToArray();

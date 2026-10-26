@@ -11,28 +11,37 @@ using UnityEditor.Build.Reporting;
 namespace Javienne.StartupDiagnostics
 {
     /// <summary>
-    ///     Builds the game for a startup measure, with the settings of the project and as a non-development build.
+    ///     Builds the game for a startup measure, with the settings of the project: as a non-development build, or as a
+    ///     development build for a Profiler capture.
     /// </summary>
     internal static class MeasureBuild
     {
         public const string FOLDER = "Build/StartupDiagnostics";
+        public const string DEVELOPMENT_FOLDER = "Development";
 
         private const string DEFAULT_NAME = "Game";
         private const string INVALID_CHARACTERS = "\\/:*?\"<>|";
 
         /// <summary>
-        ///     Where the build of the platform goes by default: <see cref="FOLDER" />/&lt;platform&gt;/&lt;product name&gt;.
+        ///     Where the build of the platform goes by default: <see cref="FOLDER" />/&lt;platform&gt;/&lt;product name&gt;,
+        ///     in the <see cref="DEVELOPMENT_FOLDER" /> of the platform for a development build.
         /// </summary>
-        public static string GetDefaultPath(BuildTarget target)
+        public static string GetDefaultPath(BuildTarget target, bool development)
         {
-            return Path.Combine(FOLDER, target.ToString(), GetFileName(PlayerSettings.productName, target, EditorUserBuildSettings.buildAppBundle));
+            var folder = Path.Combine(FOLDER, target.ToString());
+            if (development)
+            {
+                folder = Path.Combine(folder, DEVELOPMENT_FOLDER);
+            }
+
+            return Path.Combine(folder, GetFileName(PlayerSettings.productName, target, EditorUserBuildSettings.buildAppBundle));
         }
 
         /// <summary>
         ///     Calls the <see cref="IBeforeMeasureBuild" /> of the project, then builds the target to the path. The target is
         ///     the active build target, as checked by <see cref="MeasureChecks.GetBlockingIssue" />.
         /// </summary>
-        public static async Task BuildAsync(BuildTarget target, string path, CancellationToken cancellation)
+        public static async Task BuildAsync(BuildTarget target, string path, bool development, CancellationToken cancellation)
         {
             foreach (var step in CreateBeforeBuildSteps())
             {
@@ -42,9 +51,10 @@ namespace Javienne.StartupDiagnostics
 
             cancellation.ThrowIfCancellationRequested();
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
-            var summary = Build(target, path).summary;
+            var summary = Build(target, path, development ? BuildOptions.Development : BuildOptions.None).summary;
             if (summary.result != BuildResult.Succeeded) throw new MeasureException($"The build failed ({summary.result}, {summary.totalErrors} errors): see the console.");
-            if ((summary.options & BuildOptions.Development) != 0) throw new MeasureException("The active build profile makes a development build, slower to start: turn Development Build off in it for the measure.");
+            if (!development && (summary.options & BuildOptions.Development) != 0) throw new MeasureException("The active build profile makes a development build, slower to start: turn Development Build off in it for the measure.");
+            if (development && (summary.options & BuildOptions.Development) == 0) throw new MeasureException("The build is not a development build: the Profiler capture needs one.");
         }
 
         /// <summary>
@@ -82,13 +92,13 @@ namespace Javienne.StartupDiagnostics
             return name.ToString();
         }
 
-        private static BuildReport Build(BuildTarget target, string path)
+        private static BuildReport Build(BuildTarget target, string path, BuildOptions options)
         {
             var profile = BuildProfile.GetActiveBuildProfile();
-            if (profile != null) return BuildPipeline.BuildPlayer(new BuildPlayerWithProfileOptions { buildProfile = profile, locationPathName = path, options = BuildOptions.None });
+            if (profile != null) return BuildPipeline.BuildPlayer(new BuildPlayerWithProfileOptions { buildProfile = profile, locationPathName = path, options = options });
 
             var scenes = EditorBuildSettings.scenes.Where(scene => scene.enabled).Select(scene => scene.path).ToArray();
-            return BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = scenes, locationPathName = path, target = target, targetGroup = BuildPipeline.GetBuildTargetGroup(target), options = BuildOptions.None });
+            return BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = scenes, locationPathName = path, target = target, targetGroup = BuildPipeline.GetBuildTargetGroup(target), options = options });
         }
 
         private static IBeforeMeasureBuild[] CreateBeforeBuildSteps()

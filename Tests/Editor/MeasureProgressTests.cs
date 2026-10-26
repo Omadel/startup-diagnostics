@@ -31,6 +31,13 @@ namespace Javienne.StartupDiagnostics.Tests
         }
 
         [Test]
+        public void CountSteps_ProfilerCapture_CountsOneCaptureInsteadOfTheColdLaunches()
+        {
+            // The device check, the build, the install, the first launch and the capture.
+            Assert.That(MeasureProgress.CountSteps(new MeasureSettings { ProfilerCapture = true }), Is.EqualTo(5));
+        }
+
+        [Test]
         public void GetTitle_GivesTheStepAndTheTimes()
         {
             var title = MeasureProgress.GetTitle("Building", 1, 14, TimeSpan.FromSeconds(83), TimeSpan.FromSeconds(95));

@@ -78,6 +78,23 @@ namespace Javienne.StartupDiagnostics
         /// </summary>
         public List<MilestoneSummary> ColdSummary = new();
 
+        /// <summary>
+        ///     Whether the measure captured the Profiler, in a development build, instead of timing cold launches.
+        /// </summary>
+        public bool ProfilerCapture;
+
+        public float ProfilerSeconds;
+
+        /// <summary>
+        ///     The launch that captured the Profiler, out of the summary: a development build starts slower.
+        /// </summary>
+        public Launch CaptureLaunch;
+
+        /// <summary>
+        ///     The Profiler capture copied from the device, relative to the project, or empty.
+        /// </summary>
+        public string CapturePath;
+
         public bool HasFirstLaunch => FirstLaunch != null && FirstLaunch.Milestones.Count > 0;
     }
 }

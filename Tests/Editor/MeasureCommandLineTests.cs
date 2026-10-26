@@ -34,6 +34,24 @@ namespace Javienne.StartupDiagnostics.Tests
         }
 
         [Test]
+        public void Parse_ProfilerCapture_CapturesForTheSeconds()
+        {
+            var settings = MeasureCommandLine.Parse(new[] { "-startupProfilerCapture", "-startupProfilerSeconds", "4.5" }, BuildTarget.Android);
+
+            Assert.That(settings.ProfilerCapture, Is.True);
+            Assert.That(settings.ProfilerSeconds, Is.EqualTo(4.5f));
+        }
+
+        [Test]
+        public void Parse_NoProfilerCapture_TimesColdLaunchesWithTheDefaultSeconds()
+        {
+            var settings = MeasureCommandLine.Parse(new string[0], BuildTarget.Android);
+
+            Assert.That(settings.ProfilerCapture, Is.False);
+            Assert.That(settings.ProfilerSeconds, Is.EqualTo(MeasureSettings.DEFAULT_PROFILER_SECONDS));
+        }
+
+        [Test]
         public void Parse_NoInstall_MeasuresTheGameOnTheDeviceWithoutBuilding()
         {
             var settings = MeasureCommandLine.Parse(new[] { "-startupNoInstall" }, BuildTarget.Android);
@@ -53,6 +71,8 @@ namespace Javienne.StartupDiagnostics.Tests
         [TestCase("-startupPlatform", "windows")]
         [TestCase("-startupRuns", "0")]
         [TestCase("-startupRuns", "ten")]
+        [TestCase("-startupProfilerSeconds", "0")]
+        [TestCase("-startupProfilerSeconds", "6s")]
         public void Parse_InvalidValue_Throws(string option, string value)
         {
             Assert.That(() => MeasureCommandLine.Parse(new[] { option, value }, BuildTarget.Android), Throws.TypeOf<MeasureException>().With.Message.StartsWith(option));

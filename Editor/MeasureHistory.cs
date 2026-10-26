@@ -51,17 +51,17 @@ namespace Javienne.StartupDiagnostics
 
         /// <summary>
         ///     The measure to compare a measure with: the newest one that succeeded before it, for the same game on the same
-        ///     device. Null if there is none.
+        ///     device. Null if there is none. Profiler captures are not compared.
         /// </summary>
         public static MeasureFile FindPrevious(IReadOnlyList<MeasureFile> newestFirst, MeasureFile shown)
         {
-            if (shown == null || string.IsNullOrEmpty(shown.Result.DeviceId)) return null;
+            if (shown == null || shown.Result.ProfilerCapture || string.IsNullOrEmpty(shown.Result.DeviceId)) return null;
 
             var startedAt = GetStartedAt(shown.Result);
             foreach (var file in newestFirst)
             {
                 var result = file.Result;
-                if (file == shown || result.Status != MeasureStatus.SUCCEEDED || GetStartedAt(result) >= startedAt) continue;
+                if (file == shown || result.Status != MeasureStatus.SUCCEEDED || result.ProfilerCapture || GetStartedAt(result) >= startedAt) continue;
                 if (result.Platform == shown.Result.Platform && result.DeviceId == shown.Result.DeviceId && result.ApplicationIdentifier == shown.Result.ApplicationIdentifier) return file;
             }
 

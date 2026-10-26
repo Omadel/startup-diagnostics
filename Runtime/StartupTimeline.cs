@@ -61,7 +61,7 @@ namespace Javienne.StartupDiagnostics
         ///     <see cref="Time.realtimeSinceStartupAsDouble" />, which goes back during the start (seen on iOS): a milestone
         ///     recorded before the first scene loads would come after later ones.
         /// </summary>
-        private static double Now => System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency;
+        internal static double Now => System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency;
 
         /// <summary>
         ///     Records a milestone of the start, at the current time. Ignored once the start has ended.
