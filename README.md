@@ -2,7 +2,7 @@
 
 A Unity package that times the **cold start** of a game, from the start of the process to its first playable screen, on Android, iOS and in Play Mode.
 
-> Work in progress: this README covers the startup timeline only. The measurement window, the Profiler capture, the launch screen and the optimization guide are coming in 1.0.0.
+> Work in progress: this README covers the startup timeline and the measure on Android, from a script or the command line. The measure on iOS, its window, the Profiler capture, the launch screen and the optimization guide are coming in 1.0.0.
 
 ## Requirements
 
@@ -79,6 +79,64 @@ public class Boot : MonoBehaviour
 - `EndAtFirstFrameAsync` waits for a scene loading, records its first milestone when the scene is loaded, and ends the start once its first frame is rendered. With Addressables installed, it also takes the handle of `Addressables.LoadSceneAsync`.
 - Call `DeferEnd` before the first frame is rendered: from `Awake` or `Start` of a component of the first scene, or from a `RuntimeInitializeOnLoadMethod` at `BeforeSceneLoad` or later. The timeline starts over at `SubsystemRegistration`.
 - Calling `End` after the start has ended logs a warning, and the milestone is left out. So are milestones marked after the end.
+
+## Measuring the start on a device
+
+The measure builds the game, installs it on a device plugged in, launches it once, then launches it N times with the game killed before each launch, and sums up each milestone over these cold launches: median, minimum and maximum.
+
+> **The clean install deletes the data of the game on the device.** Keep the device unlocked with its screen on during the measure: it checks the lock screen before each launch.
+
+On Android, the device needs USB debugging. The measure uses adb, java and bundletool from Unity's Android module, or the SDK and JDK set in *Preferences › External Tools*. An AAB is installed as Google Play would serve it to the device, an APK as is.
+
+### From a script
+
+```csharp
+using Javienne.StartupDiagnostics;
+using UnityEditor;
+
+var run = StartupMeasure.Start(new MeasureSettings { Platform = BuildTarget.Android, Runs = 10 });
+var result = await run.Completion;
+```
+
+| Setting | Default | |
+| --- | --- | --- |
+| `Platform` | `Android` | Building needs it to be the active build target. |
+| `Device` | the only one plugged in | The serial of the device on Android. |
+| `Runs` | 10 | Cold launches, after the first launch. |
+| `Rebuild` | `true` | Builds the game first, with the settings of the project, as a non-development build. Otherwise measures the build already at `BuildPath`. |
+| `BuildPath` | `Build/StartupDiagnostics/<platform>/<product name>` | An APK or an AAB on Android, after the setting *Build App Bundle*. |
+| `CleanInstall` | `true` | Uninstalls and installs the game, then launches it once, out of the summary. |
+| `FirstLaunchWait`, `LaunchWait` | 15 s, 5 s | Time left to the game after the end of its start, before it is killed: the first launch often downloads or caches content. |
+
+`Start` returns at once. The measure writes its progress and its result to a JSON file of `Library/StartupDiagnostics`, `run.ResultPath`: its `Status` goes from `running` to `succeeded`, `failed` (with an `Error`) or `cancelled`. The file holds the device, its OS and its network, the commit of the project, the build, each launch with its milestones and what the OS reports (`am start -W` on Android), and `ColdSummary`. Script reloads wait for the end of the measure. `run.Cancel()`, or the cancel button of the measure in the progress bar of the editor, stops it.
+
+### Before the build
+
+To prepare the build of a measure, for example to publish remote content, implement `IBeforeMeasureBuild`. Each implementation with a parameterless constructor is called just before the build, and the build waits for its task:
+
+```csharp
+using System.Threading.Tasks;
+using Javienne.StartupDiagnostics;
+using UnityEditor;
+
+public class PublishContent : IBeforeMeasureBuild
+{
+    public async Task OnBeforeMeasureBuildAsync(BuildTarget target)
+    {
+        await PublishAsync(target);
+    }
+}
+```
+
+### From the command line
+
+With the editor of the project closed:
+
+```
+Unity -batchmode -projectPath <project> -buildTarget Android -executeMethod Javienne.StartupDiagnostics.StartupMeasure.RunFromCommandLine
+```
+
+Leave out `-quit`: the editor quits at the end of the measure, with the exit code 0 if it succeeded and 1 otherwise. Options: `-startupPlatform android`, `-startupDevice <serial>`, `-startupRuns <N>`, `-startupBuild <path>`, `-startupNoBuild` (measure the build already there) and `-startupNoInstall`.
 
 ## License
 

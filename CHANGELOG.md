@@ -13,4 +13,7 @@ All notable changes to this package are documented in this file. The format foll
   - origin at the start of the process on Android and iOS, at the start of Play Mode in the editor;
   - one `[Startup]` line in the log, and in `startup.txt` of the temporary cache in players.
 - `EndAtFirstFrameAsync` for a scene loaded by Addressables, compiled only when Addressables is installed.
-- Edit Mode tests for the line format, the origin and the end of the start.
+- Measure of the cold start on an Android device, `StartupMeasure`: build, clean install, first launch, then N cold launches, with the median, minimum and maximum of each milestone, written to a JSON file of `Library/StartupDiagnostics` as it goes.
+- `IBeforeMeasureBuild`, called just before the build of a measure.
+- `StartupMeasure.RunFromCommandLine`, to measure from the command line with `-executeMethod`.
+- Edit Mode tests for the line format, the origin, the end of the start, the reading of the `[Startup]` line, the summary of the launches, the adb and bundletool commands and the command line.
