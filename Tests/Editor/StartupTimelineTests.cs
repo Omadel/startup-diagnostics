@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEngine.Scripting;
 
 namespace Javienne.StartupDiagnostics.Tests
 {
@@ -52,6 +53,14 @@ namespace Javienne.StartupDiagnostics.Tests
         public void GetProcessStart_NowAndProcessAge_ReturnsTheStartOnTheSameClock(double now, double processAge, double expected)
         {
             Assert.That(StartupTimeline.GetProcessStart(now, processAge), Is.EqualTo(expected).Within(TOLERANCE));
+        }
+
+        [Test]
+        public void RuntimeAssembly_IsAlwaysLinked()
+        {
+            var assembly = typeof(StartupTimeline).Assembly;
+
+            Assert.That(assembly.IsDefined(typeof(AlwaysLinkAssemblyAttribute), false), Is.True);
         }
     }
 }

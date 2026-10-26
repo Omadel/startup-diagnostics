@@ -161,7 +161,7 @@ With the editor of the project closed:
 Unity -batchmode -projectPath <project> -buildTarget Android -executeMethod Javienne.StartupDiagnostics.StartupMeasure.RunFromCommandLine
 ```
 
-Leave out `-quit`: the editor quits at the end of the measure, with the exit code 0 if it succeeded and 1 otherwise. Options: `-startupPlatform android|ios` (the active build target by default), `-startupDevice <id>`, `-startupRuns <N>`, `-startupBuild <path>`, `-startupNoBuild` (measure the build already there) and `-startupNoInstall` (measure the game on the device, without building nor installing it).
+Leave out `-quit`: the editor quits at the end of the measure, with the exit code 0 if it succeeded and 1 otherwise. Options: `-startupPlatform android|ios` (the active build target by default), `-startupDevice <id>`, `-startupRuns <N>`, `-startupBuild <path>`, `-startupNoBuild` (measure the build already there) and `-startupNoInstall` (measure the game on the device, without building nor installing it). The measure writes the same JSON file as from the window, and logs its result in a `[Startup Diagnostics]` line.
 
 ## License
 
