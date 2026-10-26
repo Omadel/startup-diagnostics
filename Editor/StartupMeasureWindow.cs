@@ -56,6 +56,9 @@ namespace Javienne.StartupDiagnostics
 
         private ToolbarButton _measureMenuButton;
         private ToolbarButton _revealButton;
+        private VisualElement _progressRow;
+        private ProgressBar _progressBar;
+        private Button _cancelButton;
         private VisualElement _settingsPanel;
         private DropdownField _platformField;
         private DropdownField _deviceField;
@@ -69,7 +72,6 @@ namespace Javienne.StartupDiagnostics
         private FloatField _launchWaitField;
         private HelpBox _issueBox;
         private Button _measureButton;
-        private Button _cancelButton;
         private VisualElement _result;
         private HelpBox _emptyBox;
         private Label _details;
@@ -147,6 +149,13 @@ namespace Javienne.StartupDiagnostics
             toolbar.Add(new ToolbarButton(Refresh) { text = "Refresh" });
             root.Add(toolbar);
 
+            _progressRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center, marginLeft = 4, marginRight = 4, marginTop = 4 } };
+            _progressBar = new ProgressBar { style = { flexGrow = 1, flexShrink = 1 } };
+            _cancelButton = new Button(CancelMeasure) { text = "Cancel", tooltip = "Stops the measure at its next step; the game may be left running on the device." };
+            _progressRow.Add(_progressBar);
+            _progressRow.Add(_cancelButton);
+            root.Add(_progressRow);
+
             root.Add(CreateSettings());
             root.Add(CreateResult());
 
@@ -221,9 +230,7 @@ namespace Javienne.StartupDiagnostics
             foldout.Add(_issueBox);
 
             var buttons = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd, marginTop = 4 } };
-            _cancelButton = new Button(CancelMeasure) { text = "Cancel" };
             _measureButton = new Button(StartMeasure) { text = "Measure", style = { minWidth = 100 } };
-            buttons.Add(_cancelButton);
             buttons.Add(_measureButton);
             foldout.Add(buttons);
             return foldout;
@@ -428,12 +435,12 @@ namespace Javienne.StartupDiagnostics
         private void UpdateStatus(MeasureResult result)
         {
             var current = StartupMeasure.Current;
+            var isCurrent = current != null && current.Result == result && !current.IsDone;
             switch (result.Status)
             {
                 case MeasureStatus.RUNNING:
-                    var isCurrent = current != null && current.Result == result && !current.IsDone;
-                    _statusBox.text = isCurrent ? $"Measuring: {result.Step}." : $"Not finished, at: {result.Step}. The measure runs in another editor, or stopped before its end.";
-                    _statusBox.messageType = isCurrent ? HelpBoxMessageType.Info : HelpBoxMessageType.Warning;
+                    _statusBox.text = $"Not finished, at: {result.Step}. The measure runs in another editor, or stopped before its end.";
+                    _statusBox.messageType = HelpBoxMessageType.Warning;
                     break;
                 case MeasureStatus.FAILED:
                     _statusBox.text = $"Failed at {result.Step}: {result.Error}";
@@ -445,7 +452,8 @@ namespace Javienne.StartupDiagnostics
                     break;
             }
 
-            _statusBox.style.display = result.Status == MeasureStatus.SUCCEEDED ? DisplayStyle.None : DisplayStyle.Flex;
+            // The progress bar shows the step of the running measure.
+            _statusBox.style.display = result.Status == MeasureStatus.SUCCEEDED || isCurrent ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         /// <summary>
@@ -585,8 +593,31 @@ namespace Javienne.StartupDiagnostics
             _settingsPanel.SetEnabled(!busy);
             _measureButton.SetEnabled(issue == null && !busy);
             _measureButton.text = _checking != null ? "Checking the device…" : running ? "Measuring…" : "Measure";
-            _cancelButton.style.display = busy ? DisplayStyle.Flex : DisplayStyle.None;
             _buildField.textEdition.placeholder = MeasureBuild.GetDefaultPath(_settings.Platform).Replace('\\', '/');
+            UpdateProgress();
+        }
+
+        /// <summary>
+        ///     The bar of the device check before a measure, then of the running measure: the steps done, the step under way
+        ///     and the time it has taken.
+        /// </summary>
+        private void UpdateProgress()
+        {
+            var run = StartupMeasure.IsRunning ? StartupMeasure.Current : null;
+            _progressRow.style.display = run != null || _checking != null ? DisplayStyle.Flex : DisplayStyle.None;
+            if (run != null)
+            {
+                var now = DateTime.UtcNow;
+                _progressBar.highValue = run.StepCount;
+                _progressBar.value = Math.Max(0, run.StepIndex);
+                _progressBar.title = MeasureProgress.GetTitle(run.Result.Step, Math.Max(0, run.StepIndex), run.StepCount, now - run.StepStartedAt, now - run.StartedAt);
+            }
+            else if (_checking != null)
+            {
+                _progressBar.highValue = 1;
+                _progressBar.value = 0;
+                _progressBar.title = "Checking the device before the measure…";
+            }
         }
 
         private void UpdateDevices()

@@ -54,7 +54,7 @@ namespace Javienne.StartupDiagnostics
             var startedAt = DateTime.UtcNow;
             var result = new MeasureResult { Platform = settings.Platform.ToString(), StartedAt = startedAt.ToString("o", CultureInfo.InvariantCulture), UnityVersion = Application.unityVersion, Runs = settings.Runs, CleanInstall = settings.CleanInstall };
             var fileName = startedAt.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "-" + settings.Platform.ToString().ToLowerInvariant() + ".json";
-            var run = new MeasureRun(settings, result, Path.Combine(RESULTS_FOLDER, fileName));
+            var run = new MeasureRun(settings, result, Path.Combine(RESULTS_FOLDER, fileName), startedAt);
             Current = run;
             run.Completion = RunAsync(run);
             return run;
@@ -105,7 +105,7 @@ namespace Javienne.StartupDiagnostics
 
                 result.ApplicationIdentifier = GetApplicationIdentifier(settings.Platform);
                 var device = CreateDevice(settings);
-                Report(run, progress, "Checking the device", 0);
+                Report(run, progress, "Checking the device");
                 await device.ConnectAsync(cancellation);
                 result.DeviceId = device.Id;
                 result.DeviceModel = device.Model;
@@ -115,24 +115,22 @@ namespace Javienne.StartupDiagnostics
                 result.BuildPath = settings.Rebuild || settings.CleanInstall ? GetBuildPath(settings) : string.Empty;
                 if (settings.Rebuild)
                 {
-                    Report(run, progress, "Building", 0);
+                    Report(run, progress, "Building");
                     await MeasureBuild.BuildAsync(settings.Platform, result.BuildPath, cancellation);
                     result.Rebuilt = true;
                 }
 
-                var firstLaunches = settings.CleanInstall ? 1 : 0;
-                var launches = firstLaunches + settings.Runs;
                 if (settings.CleanInstall)
                 {
-                    Report(run, progress, "Installing", 0);
+                    Report(run, progress, "Installing");
                     await device.InstallAsync(result.BuildPath, cancellation);
-                    Report(run, progress, "First launch", 0);
+                    Report(run, progress, "First launch");
                     result.FirstLaunch = await device.LaunchAsync(TimeSpan.FromSeconds(settings.FirstLaunchWait), cancellation);
                 }
 
                 for (var i = 0; i < settings.Runs; i++)
                 {
-                    Report(run, progress, $"Cold launch {i + 1}/{settings.Runs}", (float)(firstLaunches + i) / launches);
+                    Report(run, progress, $"Cold launch {i + 1}/{settings.Runs}");
                     result.ColdLaunches.Add(await device.LaunchAsync(TimeSpan.FromSeconds(settings.LaunchWait), cancellation));
                     result.ColdSummary = LaunchStatistics.Summarize(result.ColdLaunches);
                 }
@@ -220,11 +218,11 @@ namespace Javienne.StartupDiagnostics
             }
         }
 
-        private static void Report(MeasureRun run, int progress, string step, float fraction)
+        private static void Report(MeasureRun run, int progress, string step)
         {
-            run.Result.Step = step;
+            run.StartStep(step);
             run.Save();
-            Progress.Report(progress, fraction, step);
+            Progress.Report(progress, run.Fraction, step);
         }
 
         /// <summary>

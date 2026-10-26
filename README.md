@@ -100,7 +100,7 @@ Under **New measure**, choose the platform, the device (the first available, or 
 - **The last build**: installs the build already at the path;
 - **The game on the device**: launches the game as installed, without a clean install nor a first launch.
 
-**Measure** checks that the device is there and unlocked, then asks before the clean install, which deletes the data of the game on the device. The measure goes on in the background, with its progress in the progress bar of the editor.
+**Measure** checks that the device is there and unlocked, then asks before the clean install, which deletes the data of the game on the device. The measure goes on in the background. A bar under the toolbar shows how far it is, step by step (the device check, the build, the install, the first launch, then each cold launch), with the time of the step under way and of the whole measure: the build and the install take minutes, during which only these times move. **Cancel**, next to the bar, stops the measure at its next step. The progress bar of the editor shows it too.
 
 The window shows the newest measure, or an older one chosen in the toolbar, with the device, the build and the commit. For each milestone:
 
