@@ -21,7 +21,9 @@ namespace Javienne.StartupDiagnostics
     ///             uninstalls and installs the game, which deletes its data on the device, then launches it once
     ///             (<see cref="MeasureSettings.CleanInstall" />);
     ///         </item>
-    ///         <item>launches it N times, killed before each launch, and sums up each milestone over these cold launches.</item>
+    ///         <item>
+    ///             launches it N times, killed 5 s before each launch, and sums up each milestone over these cold launches.
+    ///         </item>
     ///     </list>
     ///     Each measure writes its progress and its result to a JSON file of <see cref="RESULTS_FOLDER" />. Script reloads
     ///     wait for the end of the measure.
@@ -29,6 +31,11 @@ namespace Javienne.StartupDiagnostics
     public static class StartupMeasure
     {
         public const string RESULTS_FOLDER = "Library/StartupDiagnostics";
+
+        // From the kill of the game to its next launch. A Pixel 6 relaunched 2 s after the kill is still warm from the
+        // previous launch and starts the game 190 ms faster than a device left alone; from 4.5 s on, the pause no longer
+        // changes the start.
+        internal const int PAUSE_BEFORE_LAUNCH_MILLISECONDS = 5000;
 
         private const string WORK_FOLDER = "Temp/StartupDiagnostics";
         private const string LOG_PREFIX = "[Startup Diagnostics]";
@@ -125,13 +132,13 @@ namespace Javienne.StartupDiagnostics
                     Report(run, progress, "Installing");
                     await device.InstallAsync(result.BuildPath, cancellation);
                     Report(run, progress, "First launch");
-                    result.FirstLaunch = await device.LaunchAsync(TimeSpan.FromSeconds(settings.FirstLaunchWait), cancellation);
+                    result.FirstLaunch = await LaunchAsync(device, settings.FirstLaunchWait, cancellation);
                 }
 
                 for (var i = 0; i < settings.Runs; i++)
                 {
                     Report(run, progress, $"Cold launch {i + 1}/{settings.Runs}");
-                    result.ColdLaunches.Add(await device.LaunchAsync(TimeSpan.FromSeconds(settings.LaunchWait), cancellation));
+                    result.ColdLaunches.Add(await LaunchAsync(device, settings.LaunchWait, cancellation));
                     result.ColdSummary = LaunchStatistics.Summarize(result.ColdLaunches);
                 }
 
@@ -162,6 +169,15 @@ namespace Javienne.StartupDiagnostics
             Progress.Finish(progress, GetProgressStatus(result.Status));
             LogEnd(run);
             return result;
+        }
+
+        /// <summary>
+        ///     Launches the game off the main thread: the pause before the launch and the reads of its log must not wait
+        ///     for the next update of the editor, which comes 400 ms later or more when the editor is in the background.
+        /// </summary>
+        private static Task<Launch> LaunchAsync(IMeasureDevice device, float waitAfterEnd, CancellationToken cancellation)
+        {
+            return Task.Run(() => device.LaunchAsync(TimeSpan.FromSeconds(waitAfterEnd), cancellation), cancellation);
         }
 
         /// <summary>

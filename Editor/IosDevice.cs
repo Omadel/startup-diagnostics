@@ -22,7 +22,6 @@ namespace Javienne.StartupDiagnostics
         private const string LOCAL_STARTUP_FILE = "startup.txt";
         private const string BUILD_LOG = "xcodebuild.log";
         private const string DERIVED_DATA = "DerivedData";
-        private const int SETTLE_MILLISECONDS = 2000;
         private const int POLL_MILLISECONDS = 500;
         private const int RETRY_MILLISECONDS = 2000;
         private const int CONNECTION_ATTEMPTS = 3;
@@ -93,7 +92,7 @@ namespace Javienne.StartupDiagnostics
             var empty = Path.Combine(_workFolder, EMPTY_FILE);
             File.WriteAllText(empty, string.Empty);
             await DevicectlAsync(IosCommands.CopyTo(Id, _bundleId, empty, IosCommands.STARTUP_FILE), false, cancellation);
-            await Task.Delay(SETTLE_MILLISECONDS, cancellation);
+            await Task.Delay(StartupMeasure.PAUSE_BEFORE_LAUNCH_MILLISECONDS, cancellation);
             var launch = await DevicectlAsync(IosCommands.Launch(Id, _bundleId), false, cancellation);
             var error = IosCommands.GetError(launch);
             if (error != null) throw new MeasureException($"Unable to launch {_bundleId} on the iOS device: {error}. Is it installed? Measure with a clean install.");

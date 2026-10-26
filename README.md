@@ -82,7 +82,7 @@ public class Boot : MonoBehaviour
 
 ## Measuring the start on a device
 
-The measure builds the game, installs it on a device plugged in, launches it once, then launches it N times with the game killed before each launch, and sums up each milestone over these cold launches: median, minimum and maximum.
+The measure builds the game, installs it on a device plugged in, launches it once, then launches it N times with the game killed 5 s before each launch, and sums up each milestone over these cold launches: median, minimum and maximum. Relaunched sooner, a device is still warm from the previous launch and starts the game faster than one left alone: 190 ms faster on a Pixel 6 after 2 s.
 
 > **The clean install deletes the data of the game on the device.** Keep the device unlocked with its screen on during the measure: it checks the lock screen before each launch.
 

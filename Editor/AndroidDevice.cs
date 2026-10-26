@@ -14,7 +14,6 @@ namespace Javienne.StartupDiagnostics
     {
         private const string AAB_EXTENSION = ".aab";
         private const string DEVICE_APKS = "device.apks";
-        private const int SETTLE_MILLISECONDS = 2000;
         private const int POLL_MILLISECONDS = 500;
         private const int STARTUP_TIMEOUT_SECONDS = 30;
 
@@ -82,7 +81,7 @@ namespace Javienne.StartupDiagnostics
             var activity = await GetActivityAsync(cancellation);
             await CheckUnlockedAsync(cancellation);
             await ShellAsync(cancellation, "am", "force-stop", _package);
-            await Task.Delay(SETTLE_MILLISECONDS, cancellation);
+            await Task.Delay(StartupMeasure.PAUSE_BEFORE_LAUNCH_MILLISECONDS, cancellation);
             await ProcessRunner.RunAsync(_tools.Adb, AndroidCommands.ClearLog(Id), _commandTimeout, cancellation);
             var report = await ProcessRunner.RunCheckedAsync(_tools.Adb, AndroidCommands.Shell(Id, "am", "start", "-W", "-n", activity), _launchTimeout, cancellation);
             var launch = await WaitForTimelineAsync(cancellation);
