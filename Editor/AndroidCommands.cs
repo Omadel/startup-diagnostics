@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -12,6 +13,8 @@ namespace Javienne.StartupDiagnostics
         public const string STATE_DEVICE = "device";
         public const string STATE_UNAUTHORIZED = "unauthorized";
         public const string UNITY_LOG = "Unity:V";
+
+        private const string MODEL_FIELD = "model:";
 
         private static readonly Regex _locked = new(@"(?:mShowingLockscreen|isKeyguardShowing|mKeyguardShowing)=true");
         private static readonly Regex _totalTime = new(@"TotalTime: (\d+)");
@@ -31,6 +34,24 @@ namespace Javienne.StartupDiagnostics
                 {
                     devices.Add((columns[0], columns[1]));
                 }
+            }
+
+            return devices;
+        }
+
+        /// <summary>
+        ///     The devices of <c>adb devices -l</c> ready for the measure, named after their model.
+        /// </summary>
+        public static List<ListedDevice> ParseReadyDevices(string output)
+        {
+            var devices = new List<ListedDevice>();
+            foreach (var line in output.Split('\n'))
+            {
+                var columns = line.Split(new[] { ' ', '\t', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                if (columns.Length < 2 || columns[1] != STATE_DEVICE) continue;
+
+                var model = columns.FirstOrDefault(column => column.StartsWith(MODEL_FIELD, StringComparison.Ordinal));
+                devices.Add(new ListedDevice(columns[0], model == null ? columns[0] : model.Substring(MODEL_FIELD.Length).Replace('_', ' ')));
             }
 
             return devices;

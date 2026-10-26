@@ -79,6 +79,29 @@ namespace Javienne.StartupDiagnostics.Tests
             Assert.That(LaunchStatistics.Summarize(new Launch[0]), Is.Empty);
         }
 
+        [Test]
+        public void SummarizeSteps_Launches_GivesTheMedianTimeSinceTheMilestoneBefore()
+        {
+            var launches = new[] { CreateLaunch(("scripts_start", 360), ("first_frame", 450), ("first_scene_frame", 720)), CreateLaunch(("scripts_start", 364), ("first_frame", 454), ("first_scene_frame", 670)), CreateLaunch(("scripts_start", 358), ("first_frame", 450), ("first_scene_frame", 733)) };
+
+            var steps = LaunchStatistics.SummarizeSteps(launches);
+
+            Assert.That(steps["scripts_start"], Is.EqualTo(360));
+            Assert.That(steps["first_frame"], Is.EqualTo(90));
+            Assert.That(steps["first_scene_frame"], Is.EqualTo(270));
+        }
+
+        [Test]
+        public void SummarizeSteps_MilestoneOfSomeLaunches_TakesTheMilestoneBeforeItInEachLaunch()
+        {
+            var launches = new[] { CreateLaunch(("first_frame", 900), ("first_scene_frame", 1400)), CreateLaunch(("first_frame", 940), ("addressables_ready", 1000), ("first_scene_frame", 1500)) };
+
+            var steps = LaunchStatistics.SummarizeSteps(launches);
+
+            Assert.That(steps["addressables_ready"], Is.EqualTo(60));
+            Assert.That(steps["first_scene_frame"], Is.EqualTo(500));
+        }
+
         private static Launch CreateLaunch(params (string Name, int Milliseconds)[] milestones)
         {
             var launch = new Launch { Origin = StartupTimeline.ORIGIN_PROCESS };

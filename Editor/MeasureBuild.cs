@@ -29,12 +29,11 @@ namespace Javienne.StartupDiagnostics
         }
 
         /// <summary>
-        ///     Calls the <see cref="IBeforeMeasureBuild" /> of the project, then builds the active build target to the path.
+        ///     Calls the <see cref="IBeforeMeasureBuild" /> of the project, then builds the target to the path. The target is
+        ///     the active build target, as checked by <see cref="MeasureChecks.GetBlockingIssue" />.
         /// </summary>
         public static async Task BuildAsync(BuildTarget target, string path, CancellationToken cancellation)
         {
-            if (target != EditorUserBuildSettings.activeBuildTarget) throw new MeasureException($"The active build target is {EditorUserBuildSettings.activeBuildTarget}: switch it to {target} to build for the measure, or measure a build already there.");
-
             foreach (var step in CreateBeforeBuildSteps())
             {
                 cancellation.ThrowIfCancellationRequested();
@@ -46,6 +45,16 @@ namespace Javienne.StartupDiagnostics
             var summary = Build(target, path).summary;
             if (summary.result != BuildResult.Succeeded) throw new MeasureException($"The build failed ({summary.result}, {summary.totalErrors} errors): see the console.");
             if ((summary.options & BuildOptions.Development) != 0) throw new MeasureException("The active build profile makes a development build, slower to start: turn Development Build off in it for the measure.");
+        }
+
+        /// <summary>
+        ///     The path relative to the project folder with forward slashes when it is inside it, the full path otherwise.
+        /// </summary>
+        internal static string ToProjectPath(string path, string projectFolder)
+        {
+            var fullPath = Path.GetFullPath(path);
+            var folder = Path.GetFullPath(projectFolder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return fullPath.StartsWith(folder, StringComparison.Ordinal) ? fullPath.Substring(folder.Length).Replace('\\', '/') : fullPath;
         }
 
         /// <summary>

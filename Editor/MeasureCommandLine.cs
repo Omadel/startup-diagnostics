@@ -46,6 +46,7 @@ namespace Javienne.StartupDiagnostics
                         break;
                     case NO_INSTALL:
                         settings.CleanInstall = false;
+                        settings.Rebuild = false;
                         break;
                 }
             }

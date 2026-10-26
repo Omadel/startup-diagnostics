@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -39,6 +40,12 @@ namespace Javienne.StartupDiagnostics
         public string Model { get; private set; }
         public string OsVersion { get; private set; }
         public string Network { get; private set; }
+
+        public async Task<List<ListedDevice>> ListAsync(CancellationToken cancellation)
+        {
+            var devices = await ProcessRunner.RunCheckedAsync(_tools.Adb, new[] { "devices", "-l" }, _commandTimeout, cancellation);
+            return AndroidCommands.ParseReadyDevices(devices);
+        }
 
         public async Task ConnectAsync(CancellationToken cancellation)
         {

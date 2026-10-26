@@ -1,3 +1,4 @@
+using System.IO;
 using NUnit.Framework;
 using UnityEditor;
 
@@ -16,6 +17,23 @@ namespace Javienne.StartupDiagnostics.Tests
         public void GetFileName_iOS_GivesTheFolderAsIs()
         {
             Assert.That(MeasureBuild.GetFileName("Rouflac", BuildTarget.iOS, false), Is.EqualTo("Rouflac"));
+        }
+
+        [Test]
+        public void ToProjectPath_InsideTheProject_IsRelativeWithForwardSlashes()
+        {
+            var project = Path.Combine(Path.GetTempPath(), "Project");
+
+            Assert.That(MeasureBuild.ToProjectPath(Path.Combine(project, "Build", "Game.aab"), project), Is.EqualTo("Build/Game.aab"));
+        }
+
+        [Test]
+        public void ToProjectPath_OutsideTheProject_IsTheFullPath()
+        {
+            var project = Path.Combine(Path.GetTempPath(), "Project");
+            var build = Path.Combine(Path.GetTempPath(), "ProjectBuilds", "Game.aab");
+
+            Assert.That(MeasureBuild.ToProjectPath(build, project), Is.EqualTo(Path.GetFullPath(build)));
         }
 
         [TestCase("My: Game?", "My_ Game_.apk")]

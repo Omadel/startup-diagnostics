@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -66,7 +67,7 @@ namespace Javienne.StartupDiagnostics
         ///     without <c>-quit</c>, which would quit before the measure. Options: <c>-startupPlatform android|ios</c> (the
         ///     active build target by default), <c>-startupDevice &lt;id&gt;</c>, <c>-startupRuns &lt;N&gt;</c>,
         ///     <c>-startupBuild &lt;path&gt;</c>, <c>-startupNoBuild</c> (measure the build already there) and
-        ///     <c>-startupNoInstall</c>.
+        ///     <c>-startupNoInstall</c> (measure the game on the device, without building nor installing it).
         /// </summary>
         public static void RunFromCommandLine()
         {
@@ -99,9 +100,11 @@ namespace Javienne.StartupDiagnostics
             EditorApplication.LockReloadAssemblies();
             try
             {
-                if (settings.Runs < 1) throw new MeasureException("The number of cold launches is a whole number above 0.");
+                var issue = GetBlockingIssue(settings);
+                if (issue != null) throw new MeasureException(issue);
 
-                var device = CreateDevice(settings, result);
+                result.ApplicationIdentifier = GetApplicationIdentifier(settings.Platform);
+                var device = CreateDevice(settings);
                 Report(run, progress, "Checking the device", 0);
                 await device.ConnectAsync(cancellation);
                 result.DeviceId = device.Id;
@@ -109,16 +112,12 @@ namespace Javienne.StartupDiagnostics
                 result.OsVersion = device.OsVersion;
                 result.Network = device.Network;
                 result.Commit = await GetCommitAsync(cancellation);
-                result.BuildPath = string.IsNullOrEmpty(settings.BuildPath) ? MeasureBuild.GetDefaultPath(settings.Platform) : settings.BuildPath;
+                result.BuildPath = settings.Rebuild || settings.CleanInstall ? GetBuildPath(settings) : string.Empty;
                 if (settings.Rebuild)
                 {
                     Report(run, progress, "Building", 0);
                     await MeasureBuild.BuildAsync(settings.Platform, result.BuildPath, cancellation);
                     result.Rebuilt = true;
-                }
-                else if (!File.Exists(result.BuildPath) && !Directory.Exists(result.BuildPath))
-                {
-                    throw new MeasureException($"No build at {result.BuildPath}: measure with a new build.");
                 }
 
                 var firstLaunches = settings.CleanInstall ? 1 : 0;
@@ -167,18 +166,55 @@ namespace Javienne.StartupDiagnostics
             return result;
         }
 
-        private static IMeasureDevice CreateDevice(MeasureSettings settings, MeasureResult result)
+        /// <summary>
+        ///     Why the measure cannot run with these settings in this editor, or null if it can.
+        /// </summary>
+        internal static string GetBlockingIssue(MeasureSettings settings)
+        {
+            var buildPath = GetBuildPath(settings);
+            return MeasureChecks.GetBlockingIssue(settings, buildPath, File.Exists(buildPath) || Directory.Exists(buildPath), EditorUserBuildSettings.activeBuildTarget, Application.platform == RuntimePlatform.OSXEditor);
+        }
+
+        /// <summary>
+        ///     The build that the measure makes or installs: <see cref="MeasureSettings.BuildPath" />, or the default one of
+        ///     the platform.
+        /// </summary>
+        internal static string GetBuildPath(MeasureSettings settings)
+        {
+            return string.IsNullOrEmpty(settings.BuildPath) ? MeasureBuild.GetDefaultPath(settings.Platform) : settings.BuildPath;
+        }
+
+        internal static string GetApplicationIdentifier(BuildTarget platform)
+        {
+            return PlayerSettings.GetApplicationIdentifier(platform == BuildTarget.iOS ? NamedBuildTarget.iOS : NamedBuildTarget.Android);
+        }
+
+        /// <summary>
+        ///     The devices of the platform ready for the measure.
+        /// </summary>
+        internal static Task<List<ListedDevice>> ListDevicesAsync(BuildTarget platform, CancellationToken cancellation)
+        {
+            return CreateDevice(new MeasureSettings { Platform = platform }).ListAsync(cancellation);
+        }
+
+        /// <summary>
+        ///     Finds the device of the settings and checks that it is unlocked, as the measure does first.
+        /// </summary>
+        internal static async Task<IMeasureDevice> CheckDeviceAsync(MeasureSettings settings, CancellationToken cancellation)
+        {
+            var device = CreateDevice(settings);
+            await device.ConnectAsync(cancellation);
+            return device;
+        }
+
+        private static IMeasureDevice CreateDevice(MeasureSettings settings)
         {
             switch (settings.Platform)
             {
                 case BuildTarget.Android:
-                    result.ApplicationIdentifier = PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android);
-                    return new AndroidDevice(AndroidTools.Find(), result.ApplicationIdentifier, settings.Device, Path.Combine(WORK_FOLDER, "Android"));
+                    return new AndroidDevice(AndroidTools.Find(), GetApplicationIdentifier(settings.Platform), settings.Device, Path.Combine(WORK_FOLDER, "Android"));
                 case BuildTarget.iOS:
-                    if (Application.platform != RuntimePlatform.OSXEditor) throw new MeasureException("The measure on iOS needs a Mac with Xcode.");
-
-                    result.ApplicationIdentifier = PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.iOS);
-                    return new IosDevice(result.ApplicationIdentifier, PlayerSettings.iOS.appleDeveloperTeamID, settings.Device, Path.Combine(WORK_FOLDER, "iOS"));
+                    return new IosDevice(GetApplicationIdentifier(settings.Platform), PlayerSettings.iOS.appleDeveloperTeamID, settings.Device, Path.Combine(WORK_FOLDER, "iOS"));
                 default:
                     throw new MeasureException($"The measure runs on Android and iOS, not on {settings.Platform}.");
             }

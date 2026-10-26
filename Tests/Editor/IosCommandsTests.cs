@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Javienne.StartupDiagnostics.Tests
@@ -34,6 +35,23 @@ namespace Javienne.StartupDiagnostics.Tests
             Assert.That(device.hardwareProperties.udid, Is.EqualTo(UDID));
             Assert.That(IosCommands.GetModel(device), Is.EqualTo("iPad (A16) (iPad15,7)"));
             Assert.That(IosCommands.GetOsVersion(device), Is.EqualTo("iOS 27.0.1"));
+        }
+
+        [Test]
+        public void GetReachable_Devices_KeepsThePhysicalOnesNotUnavailable()
+        {
+            var reachable = IosCommands.GetReachable(IosCommands.Parse(DEVICES).result.devices);
+
+            Assert.That(reachable.Select(device => device.hardwareProperties.udid), Is.EqualTo(new[] { UDID }));
+        }
+
+        [Test]
+        public void ToListedDevice_Device_NamesItAfterItsNameAndModel()
+        {
+            var device = IosCommands.ToListedDevice(IosCommands.Parse(DEVICES).result.devices[0]);
+
+            Assert.That(device.Id, Is.EqualTo(UDID));
+            Assert.That(device.Name, Is.EqualTo("iPad, iPad (A16)"));
         }
 
         [TestCase(UDID)]

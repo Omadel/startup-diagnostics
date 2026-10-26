@@ -58,6 +58,13 @@ namespace Javienne.StartupDiagnostics
         public string OsVersion { get; private set; }
         public string Network => MeasureResult.NETWORK_UNKNOWN;
 
+        public async Task<List<ListedDevice>> ListAsync(CancellationToken cancellation)
+        {
+            Directory.CreateDirectory(_workFolder);
+            var devices = await DevicectlAsync(IosCommands.ListDevices(), true, cancellation);
+            return IosCommands.GetReachable(devices.result.devices).Select(IosCommands.ToListedDevice).ToList();
+        }
+
         public async Task ConnectAsync(CancellationToken cancellation)
         {
             Directory.CreateDirectory(_workFolder);

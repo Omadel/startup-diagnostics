@@ -88,7 +88,7 @@ namespace Javienne.StartupDiagnostics
         /// </summary>
         public static DevicectlJson.Device SelectDevice(IReadOnlyList<DevicectlJson.Device> devices, string requested)
         {
-            var reachable = devices.Where(device => device.hardwareProperties?.reality == PHYSICAL && device.connectionProperties?.tunnelState != TUNNEL_UNAVAILABLE).ToList();
+            var reachable = GetReachable(devices);
             if (!string.IsNullOrEmpty(requested))
             {
                 var match = reachable.FirstOrDefault(device => device.hardwareProperties.udid == requested || device.identifier == requested || device.deviceProperties?.name == requested);
@@ -101,6 +101,24 @@ namespace Javienne.StartupDiagnostics
             if (reachable.Count > 1) throw new MeasureException($"Several iOS devices are available ({string.Join(", ", reachable.Select(Describe))}): choose one.");
 
             throw new MeasureException("No iOS device available: plug it in, unlock it, trust this Mac and turn Developer Mode on.");
+        }
+
+        /// <summary>
+        ///     The physical devices that devicectl can reach, which the measure can run on.
+        /// </summary>
+        public static List<DevicectlJson.Device> GetReachable(IReadOnlyList<DevicectlJson.Device> devices)
+        {
+            return devices.Where(device => device.hardwareProperties?.reality == PHYSICAL && device.connectionProperties?.tunnelState != TUNNEL_UNAVAILABLE).ToList();
+        }
+
+        /// <summary>
+        ///     The device as a measure lists it: its UDID, and its name followed by its model.
+        /// </summary>
+        public static ListedDevice ToListedDevice(DevicectlJson.Device device)
+        {
+            var name = device.deviceProperties?.name;
+            var model = string.IsNullOrEmpty(device.hardwareProperties.marketingName) ? device.hardwareProperties.productType : device.hardwareProperties.marketingName;
+            return new ListedDevice(device.hardwareProperties.udid, string.IsNullOrEmpty(name) ? model : string.IsNullOrEmpty(model) ? name : $"{name}, {model}");
         }
 
         public static string GetModel(DevicectlJson.Device device)

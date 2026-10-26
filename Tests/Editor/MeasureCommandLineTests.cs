@@ -33,6 +33,15 @@ namespace Javienne.StartupDiagnostics.Tests
             Assert.That(settings.CleanInstall, Is.False);
         }
 
+        [Test]
+        public void Parse_NoInstall_MeasuresTheGameOnTheDeviceWithoutBuilding()
+        {
+            var settings = MeasureCommandLine.Parse(new[] { "-startupNoInstall" }, BuildTarget.Android);
+
+            Assert.That(settings.CleanInstall, Is.False);
+            Assert.That(settings.Rebuild, Is.False);
+        }
+
         [TestCase("ios", BuildTarget.iOS)]
         [TestCase("IOS", BuildTarget.iOS)]
         [TestCase("android", BuildTarget.Android)]

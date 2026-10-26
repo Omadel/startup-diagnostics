@@ -57,5 +57,10 @@ namespace Javienne.StartupDiagnostics
         ///     Seconds to wait after the end of the start of each cold launch, before the game is killed.
         /// </summary>
         public float LaunchWait = DEFAULT_LAUNCH_WAIT;
+
+        internal MeasureSettings Copy()
+        {
+            return (MeasureSettings)MemberwiseClone();
+        }
     }
 }

@@ -57,6 +57,38 @@ namespace Javienne.StartupDiagnostics
         }
 
         /// <summary>
+        ///     The median time of each milestone since the milestone before it in the same launch, or since the origin for the
+        ///     first milestone, over the launches that have it.
+        /// </summary>
+        public static Dictionary<string, double> SummarizeSteps(IReadOnlyList<Launch> launches)
+        {
+            var steps = new Dictionary<string, List<int>>();
+            foreach (var launch in launches)
+            {
+                var previous = 0;
+                foreach (var milestone in launch.Milestones)
+                {
+                    if (!steps.TryGetValue(milestone.Name, out var values))
+                    {
+                        values = new List<int>();
+                        steps.Add(milestone.Name, values);
+                    }
+
+                    values.Add(milestone.Milliseconds - previous);
+                    previous = milestone.Milliseconds;
+                }
+            }
+
+            var medians = new Dictionary<string, double>();
+            foreach (var step in steps)
+            {
+                medians.Add(step.Key, Median(step.Value));
+            }
+
+            return medians;
+        }
+
+        /// <summary>
         ///     The middle value, or the mean of the two middle values for an even count.
         /// </summary>
         public static double Median(IReadOnlyList<int> values)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,6 +18,11 @@ namespace Javienne.StartupDiagnostics
         ///     One of the network values of <see cref="MeasureResult" />.
         /// </summary>
         string Network { get; }
+
+        /// <summary>
+        ///     The devices of the platform ready for the measure.
+        /// </summary>
+        Task<List<ListedDevice>> ListAsync(CancellationToken cancellation);
 
         /// <summary>
         ///     Finds the device, checks that it is unlocked, and reads what it is.

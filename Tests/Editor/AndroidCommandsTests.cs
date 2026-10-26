@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 
 namespace Javienne.StartupDiagnostics.Tests
@@ -18,6 +19,24 @@ namespace Javienne.StartupDiagnostics.Tests
         public void ParseDevices_NoDevice_GivesNothing()
         {
             Assert.That(AndroidCommands.ParseDevices("List of devices attached\n\n"), Is.Empty);
+        }
+
+        [Test]
+        public void ParseReadyDevices_AdbDevicesLong_NamesTheReadyOnesAfterTheirModel()
+        {
+            var output = "List of devices attached\n25271FDF6004NP         device usb:0-1 product:oriole model:Pixel_6 device:oriole transport_id:13\nR58M12ABCDE            unauthorized usb:0-2 transport_id:14\r\n\n";
+
+            var devices = AndroidCommands.ParseReadyDevices(output);
+
+            Assert.That(devices.Select(device => (device.Id, device.Name)), Is.EqualTo(new[] { (SERIAL, "Pixel 6") }));
+        }
+
+        [Test]
+        public void ParseReadyDevices_NoModel_NamesItAfterItsSerial()
+        {
+            var devices = AndroidCommands.ParseReadyDevices("emulator-5554\tdevice\n");
+
+            Assert.That(devices.Select(device => (device.Id, device.Name)), Is.EqualTo(new[] { ("emulator-5554", "emulator-5554") }));
         }
 
         [Test]
