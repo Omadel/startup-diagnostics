@@ -2,7 +2,7 @@
 
 A Unity package that times the **cold start** of a game, from the start of the process to its first playable screen, on Android, iOS and in Play Mode.
 
-> Work in progress: this README covers the startup timeline and the measure on Android and iOS, from its window, a script or the command line. The Profiler capture, the launch screen and the optimization guide are coming in 1.0.0.
+> Work in progress: this README covers the startup timeline, the measure on Android and iOS, from its window, a script or the command line, and the Profiler capture of the start. The launch screen and the optimization guide are coming in 1.0.0.
 
 ## Requirements
 
@@ -132,6 +132,8 @@ var result = await run.Completion;
 | `BuildPath` | `Build/StartupDiagnostics/<platform>/<product name>` | An APK or an AAB on Android, after the setting *Build App Bundle*; the folder of the Xcode project on iOS. |
 | `CleanInstall` | `true` | Uninstalls and installs the game, then launches it once, out of the summary. Without it, the game installed on the device is measured. |
 | `FirstLaunchWait`, `LaunchWait` | 15 s, 5 s | Time left to the game after the end of its start, before it is killed: the first launch often downloads or caches content. |
+| `ProfilerCapture` | `false` | Captures the Profiler of the start instead of timing cold launches, see [Capturing the Profiler of the start](#capturing-the-profiler-of-the-start). |
+| `ProfilerSeconds` | 6 s | Length of the Profiler capture, from the first scripts. |
 
 `Start` returns at once. The measure writes its progress and its result to a JSON file of `Library/StartupDiagnostics`, `run.ResultPath`: its `Status` goes from `running` to `succeeded`, `failed` (with an `Error`) or `cancelled`. The file holds the device, its OS and its network, the commit of the project, the build, each launch with its milestones and what the OS reports (`am start -W` on Android), and `ColdSummary`. The network of the device is only read on Android. Script reloads wait for the end of the measure. `run.Cancel()`, or the cancel button of the measure in the progress bar of the editor, stops it.
 
@@ -161,7 +163,20 @@ With the editor of the project closed:
 Unity -batchmode -projectPath <project> -buildTarget Android -executeMethod Javienne.StartupDiagnostics.StartupMeasure.RunFromCommandLine
 ```
 
-Leave out `-quit`: the editor quits at the end of the measure, with the exit code 0 if it succeeded and 1 otherwise. Options: `-startupPlatform android|ios` (the active build target by default), `-startupDevice <id>`, `-startupRuns <N>`, `-startupBuild <path>`, `-startupNoBuild` (measure the build already there) and `-startupNoInstall` (measure the game on the device, without building nor installing it). The measure writes the same JSON file as from the window, and logs its result in a `[Startup Diagnostics]` line.
+Leave out `-quit`: the editor quits at the end of the measure, with the exit code 0 if it succeeded and 1 otherwise. Options: `-startupPlatform android|ios` (the active build target by default), `-startupDevice <id>`, `-startupRuns <N>`, `-startupBuild <path>`, `-startupNoBuild` (measure the build already there), `-startupNoInstall` (measure the game on the device, without building nor installing it), `-startupProfilerCapture` (capture the Profiler instead) and `-startupProfilerSeconds <s>`. The measure writes the same JSON file as from the window, and logs its result in a `[Startup Diagnostics]` line.
+
+## Capturing the Profiler of the start
+
+The timeline tells which step of the start is long; the Profiler tells what runs in it. Attaching the Profiler to a device misses the start, and the launch arguments `-profiler-enable -profiler-log-file` stop recording after about 2 s. The measure records it from the game itself instead:
+
+1. it builds the game as a **development build**, to `Build/StartupDiagnostics/<platform>/Development/<product name>` by default;
+2. after the clean install and the first launch, it asks the game for a capture, with a file in its persistent data path, then launches it once more;
+3. the game records the Profiler from its first scripts for 6 s, to a `.raw` file;
+4. the measure copies the capture from the device, next to the JSON file of the measure in `Library/StartupDiagnostics`, and opens it in the Profiler window.
+
+In the window, turn on **Profiler capture** under **New measure**, with the length of the capture; from a script, set `ProfilerCapture`. **Open in Profiler** loads the capture of the measure shown again.
+
+A development build starts slower than the game: the launch of the capture stays out of the cold launches and of the comparisons. Compare the share of each step, not its time. The capture code is compiled only in development builds, and records only when the measure asks for it.
 
 ## License
 
