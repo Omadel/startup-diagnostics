@@ -139,7 +139,7 @@ var result = await run.Completion;
 
 ### Before the build
 
-To prepare the build of a measure, for example to publish remote content, implement `IBeforeMeasureBuild`. Each implementation with a parameterless constructor is called just before the build, and the build waits for its task:
+To prepare the build of a measure, for example to publish remote content, implement `IBeforeMeasureBuild`. Each implementation with a parameterless constructor is called just before the build, out of the player loop so that it may build too, and the build waits for its task. An exception fails the measure, with its message:
 
 ```csharp
 using System.Threading.Tasks;

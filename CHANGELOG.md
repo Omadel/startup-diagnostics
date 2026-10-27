@@ -17,7 +17,7 @@ All notable changes to this package are documented in this file. The format foll
 - Measure of the cold start on an Android or iOS device, `StartupMeasure`: build, clean install, first launch, then N cold launches, with the median, minimum and maximum of each milestone, written to a JSON file of `Library/StartupDiagnostics` as it goes.
 - Window of the measure, in *Window › Analysis › Startup Diagnostics*: its settings, the devices ready, a confirmation before the clean install, a progress bar of the measure under way, step by step, then each milestone of a measure with the time of its step and its change since the previous measure on the same device, flagged above 10%.
 - Profiler capture of the start, `MeasureSettings.ProfilerCapture`: a development build records the Profiler from its first scripts for a few seconds, then the measure copies the capture from the device and opens it in the Profiler window. The capture code is compiled only in development builds.
-- `IBeforeMeasureBuild`, called just before the build of a measure.
+- `IBeforeMeasureBuild`, called just before the build of a measure, out of the player loop.
 - `StartupMeasure.RunFromCommandLine`, to measure from the command line with `-executeMethod`.
 - Launch screen, off by default, in *Project Settings › Startup Diagnostics*: an icon of the project's choosing at the same place and size from the launch screen of the OS to the end of the start, over the splash background colour of the Player Settings, with a loading ring from the first frame of the game:
   - added to the first scene of each build, and created before the first scene in Play Mode, with a camera of its own; hidden as the end of the start is requested;

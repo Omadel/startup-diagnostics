@@ -38,20 +38,20 @@ namespace Javienne.StartupDiagnostics
         }
 
         /// <summary>
-        ///     Calls the <see cref="IBeforeMeasureBuild" /> of the project, then builds the target to the path. The target is
-        ///     the active build target, as checked by <see cref="MeasureChecks.GetBlockingIssue" />.
+        ///     Calls the <see cref="IBeforeMeasureBuild" /> of the project, then builds the target to the path, both out of
+        ///     the player loop. The target is the active build target, as checked by <see cref="MeasureChecks.GetBlockingIssue" />.
         /// </summary>
         public static async Task BuildAsync(BuildTarget target, string path, bool development, CancellationToken cancellation)
         {
             foreach (var step in CreateBeforeBuildSteps())
             {
                 cancellation.ThrowIfCancellationRequested();
-                await step.OnBeforeMeasureBuildAsync(target);
+                await RunOutOfPlayerLoopAsync(() => step.OnBeforeMeasureBuildAsync(target)).Unwrap();
             }
 
             cancellation.ThrowIfCancellationRequested();
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
-            var summary = (await BuildOutOfPlayerLoopAsync(target, path, development ? BuildOptions.Development : BuildOptions.None)).summary;
+            var summary = (await RunOutOfPlayerLoopAsync(() => Build(target, path, development ? BuildOptions.Development : BuildOptions.None))).summary;
             if (summary.result != BuildResult.Succeeded) throw new MeasureException($"The build failed ({summary.result}, {summary.totalErrors} errors): see the console.");
             if (!development && (summary.options & BuildOptions.Development) != 0) throw new MeasureException("The active build profile makes a development build, slower to start: turn Development Build off in it for the measure.");
             if (development && (summary.options & BuildOptions.Development) == 0) throw new MeasureException("The build is not a development build: the Profiler capture needs one.");
@@ -93,25 +93,29 @@ namespace Javienne.StartupDiagnostics
         }
 
         /// <summary>
-        ///     Builds at the next call of <see cref="EditorApplication.delayCall" />, out of the player loop: Unity refuses
-        ///     a build inside it, where its synchronization context may run the continuation of an await, such as the one
-        ///     that reaches the build ("A player build cannot be executed while inside the player loop").
+        ///     Runs a function at the next <see cref="EditorApplication.update" />, out of the player loop: Unity refuses a
+        ///     build inside it, where its synchronization context may run the continuation of an await, such as the one that
+        ///     reaches the build ("A player build cannot be executed while inside the player loop"). Not
+        ///     <see cref="EditorApplication.delayCall" />, which waits for the editor to be in front.
         /// </summary>
-        private static Task<BuildReport> BuildOutOfPlayerLoopAsync(BuildTarget target, string path, BuildOptions options)
+        private static Task<T> RunOutOfPlayerLoopAsync<T>(Func<T> function)
         {
-            var built = new TaskCompletionSource<BuildReport>();
-            EditorApplication.delayCall += () =>
+            var completion = new TaskCompletionSource<T>();
+            EditorApplication.CallbackFunction run = null;
+            run = () =>
             {
+                EditorApplication.update -= run;
                 try
                 {
-                    built.SetResult(Build(target, path, options));
+                    completion.SetResult(function());
                 }
                 catch (Exception exception)
                 {
-                    built.SetException(exception);
+                    completion.SetException(exception);
                 }
             };
-            return built.Task;
+            EditorApplication.update += run;
+            return completion.Task;
         }
 
         private static BuildReport Build(BuildTarget target, string path, BuildOptions options)
