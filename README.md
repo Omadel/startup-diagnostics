@@ -174,7 +174,7 @@ The timeline tells which step of the start is long; the Profiler tells what runs
 3. the game records the Profiler from its first scripts for 6 s, to a `.raw` file;
 4. the measure copies the capture from the device, next to the JSON file of the measure in `Library/StartupDiagnostics`, and opens it in the Profiler window.
 
-In the window, turn on **Profiler capture** under **New measure**, with the length of the capture; from a script, set `ProfilerCapture`. **Open in Profiler** loads the capture of the measure shown again.
+In the window, turn on **Profiler capture** under **New measure**, with the length of the capture, then press **Capture**; from a script, set `ProfilerCapture`. **Open in Profiler** loads the capture of the measure shown again.
 
 A development build starts slower than the game: the launch of the capture stays out of the cold launches and of the comparisons. Compare the share of each step, not its time. The capture code is compiled only in development builds, and records only when the measure asks for it.
 

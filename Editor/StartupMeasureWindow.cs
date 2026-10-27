@@ -785,7 +785,7 @@ namespace Javienne.StartupDiagnostics
                     if (this == null) return;
 
                     var confirmation = MeasureChecks.GetConfirmation(settings, StartupMeasure.GetApplicationIdentifier(settings.Platform), device.Model, StartupMeasure.GetBuildPath(settings).Replace('\\', '/'));
-                    if (!EditorUtility.DisplayDialog(TITLE, confirmation, "Measure", "Cancel")) return;
+                    if (!EditorUtility.DisplayDialog(TITLE, confirmation, settings.ProfilerCapture ? "Capture" : "Measure", "Cancel")) return;
 
                     settings.Device = device.Id;
                 }

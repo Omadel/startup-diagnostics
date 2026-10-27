@@ -55,7 +55,7 @@ MonoBehaviour:
         m_Untranslated: Capture the Profiler
       Text:
         m_Untranslated: 'In the measure window, turn on <b>Profiler capture</b> under
-          <b>New measure</b>, then press <b>Measure</b>.
+          <b>New measure</b>, then press <b>Capture</b>.
 
 
           A development
