@@ -2,7 +2,7 @@
 
 A Unity package that times the **cold start** of a game, from the start of the process to its first playable screen, on Android, iOS and in Play Mode.
 
-> Work in progress: this README covers the startup timeline, the measure on Android and iOS, from its window, a script or the command line, the Profiler capture of the start and the launch screen. The optimization guide is coming in 1.0.0.
+> Work in progress: this README covers the startup timeline, the measure on Android and iOS, from its window, a script or the command line, the Profiler capture of the start, the launch screen and the tutorial. The optimization guide is coming in 1.0.0.
 
 ## Requirements
 
@@ -199,6 +199,24 @@ What it does with each build:
 The launch screen shows only while the start goes on after the first frame of the first scene: call `StartupTimeline.DeferEnd` in that scene, as a boot scene does before loading the game (see [Ending the start later](#ending-the-start-later)). Otherwise the first frame ends the start, and the game shows at once.
 
 Android 12 and later crop the icon to the shape of the icons of the device, a circle on Pixel phones: keep what shows inside the circle inscribed in the image. The settings page and the Android build warn when it does not.
+
+## The tutorial
+
+An interactive tutorial walks through the package in the editor: the startup timeline, ending the start on the first playable screen, a measure on a device, its results, what to shorten, and a Profiler capture. It runs on Unity's Tutorial Framework, which the package does not depend on:
+
+1. Install the **Tutorial Framework** (`com.unity.learn.iet-framework`, 5.0 or later) from the Package Manager.
+2. In the Package Manager, select **Startup Diagnostics**, then import the **Tutorial** sample from the **Samples** tab.
+3. Open **Tutorials › Show Tutorials**, then **Measure the start of your game**.
+
+Each step that asks for something checks that it is done: the start ended in Play Mode, the measure window open, then a new measure and a new Profiler capture on a device. Following the tutorial to the end needs a device plugged in. The tutorial keeps the open scene and the layout of the editor, and sends no progress to Unity.
+
+The Tutorial Framework has side effects. Remove it once the tutorial is done:
+
+- its runtime assembly goes into the builds, with a method that runs at every start, in the start you measure;
+- 6.0.x reopens the Tutorials window at each script reload while **Display Welcome Dialog On Startup** is on, in **Project Settings › Tutorial Framework**: turn it off;
+- 5.0.x logs the warning "User not signed in. Please sign in if you want your tutorials progress to be tracked" when the editor is not signed in to a Unity account.
+
+The editor code of the sample compiles only with the framework installed. The tutorial is written with 5.0.x: 6.0.x converts it on import.
 
 ## License
 

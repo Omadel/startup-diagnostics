@@ -23,4 +23,5 @@ All notable changes to this package are documented in this file. The format foll
   - added to the first scene of each build, and created before the first scene in Play Mode, with a camera of its own; hidden as the end of the start is requested;
   - on Android, in the splash screen of Android 12 and later and in the static splash images of Unity, with the exit animation of the splash screen removed;
   - on iOS, set in the launch screen of the Player Settings before each build.
+- Tutorial sample for the Tutorial Framework 5.0 or later, imported on demand: the startup timeline, the end of the start, a measure on a device, its results, what to shorten and a Profiler capture, each step checked.
 - Edit Mode tests for the line format, the origin, the end of the start, the linking of the timeline, the reading of the `[Startup]` line, the summary of the launches, the adb, bundletool, xcodebuild and devicectl commands, the command line, the checks before a measure, its steps, the comparison of the measures, the request of a Profiler capture, and the launch screen: when it shows, its layout, its images and its Android and iOS build steps.
