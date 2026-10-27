@@ -1,8 +1,11 @@
+using System;
+
 namespace Javienne.StartupDiagnostics
 {
     /// <summary>
     ///     What a check of the diagnosis found in cause: an asset, a setting or a group, with what it costs or why.
     /// </summary>
+    [Serializable]
     internal sealed class DiagnosisItem
     {
         /// <summary>

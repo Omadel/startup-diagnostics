@@ -13,9 +13,10 @@ using UnityEngine.UIElements;
 namespace Javienne.StartupDiagnostics
 {
     /// <summary>
-    ///     Window of the startup measure, in Window › Analysis: the settings of a new measure and its start, then a measure,
-    ///     the newest by default, with each milestone over its cold launches, the time each step takes, and the change since
-    ///     the previous measure of the game on the same device.
+    ///     Window of the startup measure, in Window › Analysis. Its Measure tab has the settings of a new measure and its
+    ///     start, then a measure, the newest by default, with each milestone over its cold launches, the time each step
+    ///     takes, and the change since the previous measure of the game on the same device. Its Diagnosis tab checks what
+    ///     weighs on the start: see <see cref="DiagnosisView" />.
     /// </summary>
     internal sealed class StartupMeasureWindow : EditorWindow
     {
@@ -26,6 +27,7 @@ namespace Javienne.StartupDiagnostics
         private const int SOURCE_NEW_BUILD = 0;
         private const int SOURCE_LAST_BUILD = 1;
         private const int SOURCE_INSTALLED_GAME = 2;
+        private const int DIAGNOSIS_TAB = 1;
 
         private static readonly List<string> _platformChoices = new() { "Android", "iOS" };
         private static readonly List<string> _sourceChoices = new() { "A new build", "The last build", "The game on the device" };
@@ -41,6 +43,9 @@ namespace Javienne.StartupDiagnostics
         // Empty follows the newest measure.
         [SerializeField] private string _shownPath;
 
+        [SerializeField] private int _tab;
+        [SerializeField] private DiagnosisRun _diagnosis = new();
+
         private readonly List<MilestoneRow> _rows = new();
         private readonly List<LaunchRow> _launches = new();
         private List<MeasureFile> _files = new();
@@ -52,8 +57,11 @@ namespace Javienne.StartupDiagnostics
         private CancellationTokenSource _listing;
         private CancellationTokenSource _checking;
         private bool _wasRunning;
+        private bool _runDiagnosisOnCreate;
         private string _launchColumns;
 
+        private TabView _tabs;
+        private DiagnosisView _diagnosisView;
         private ToolbarButton _measureMenuButton;
         private ToolbarButton _revealButton;
         private VisualElement _progressRow;
@@ -119,6 +127,28 @@ namespace Javienne.StartupDiagnostics
             window.Show();
         }
 
+        /// <summary>
+        ///     Opens the window on its Diagnosis tab, and runs the diagnosis if it never ran in this window.
+        /// </summary>
+        internal static void OpenDiagnosis()
+        {
+            Open();
+            var window = GetWindow<StartupMeasureWindow>();
+            if (window._tabs == null)
+            {
+                window._tab = DIAGNOSIS_TAB;
+                window._runDiagnosisOnCreate = true;
+            }
+            else if (window._tabs.selectedTabIndex != DIAGNOSIS_TAB)
+            {
+                window._tabs.selectedTabIndex = DIAGNOSIS_TAB;
+            }
+            else if (!window._diagnosisView.HasRun)
+            {
+                window._diagnosisView.Run();
+            }
+        }
+
         private void OnEnable()
         {
             titleContent = new GUIContent(TITLE);
@@ -143,7 +173,20 @@ namespace Javienne.StartupDiagnostics
 
         private void CreateGUI()
         {
-            var root = rootVisualElement;
+            _tabs = new TabView { style = { flexGrow = 1 } };
+            _tabs.contentContainer.style.flexGrow = 1;
+            var measureTab = new Tab("Measure") { style = { flexGrow = 1 } };
+            measureTab.contentContainer.style.flexGrow = 1;
+            _tabs.Add(measureTab);
+            var diagnosisTab = new Tab("Diagnosis") { style = { flexGrow = 1 } };
+            diagnosisTab.contentContainer.style.flexGrow = 1;
+            _diagnosisView = new DiagnosisView(_diagnosis);
+            diagnosisTab.Add(_diagnosisView);
+            _tabs.Add(diagnosisTab);
+            _tabs.selectedTabIndex = _tab;
+            _tabs.activeTabChanged += OnTabChanged;
+            rootVisualElement.Add(_tabs);
+            var root = measureTab;
 
             var toolbar = new Toolbar();
             _measureMenuButton = new ToolbarButton(ShowMeasureMenu) { tooltip = "Measure to show. The newest one follows new measures." };
@@ -168,6 +211,24 @@ namespace Javienne.StartupDiagnostics
             Refresh();
             RefreshDevices();
             root.schedule.Execute(Poll).Every(POLL_MILLISECONDS);
+            if (_runDiagnosisOnCreate && _tab == DIAGNOSIS_TAB && !_diagnosisView.HasRun)
+            {
+                _diagnosisView.Run();
+            }
+
+            _runDiagnosisOnCreate = false;
+        }
+
+        /// <summary>
+        ///     Keeps the tab across domain reloads, and runs the diagnosis the first time its tab is chosen.
+        /// </summary>
+        private void OnTabChanged(Tab previous, Tab current)
+        {
+            _tab = _tabs.selectedTabIndex;
+            if (_tab == DIAGNOSIS_TAB && !_diagnosisView.HasRun)
+            {
+                _diagnosisView.Run();
+            }
         }
 
         private VisualElement CreateSettings()

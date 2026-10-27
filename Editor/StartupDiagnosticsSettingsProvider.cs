@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -8,7 +9,7 @@ namespace Javienne.StartupDiagnostics
     /// <summary>
     ///     Project Settings page of the package: the launch screen, off by default, its icon, the background colour it takes
     ///     from the Player Settings and its loading ring, with the issues of the icon, checked again whenever the icon or
-    ///     its file changes.
+    ///     its file changes; then the diagnosis, its playable scenes, its run before the builds and its thresholds.
     /// </summary>
     internal sealed class StartupDiagnosticsSettingsProvider : SettingsProvider
     {
@@ -24,13 +25,24 @@ namespace Javienne.StartupDiagnostics
         private static readonly GUIContent _loadingRingColorLabel = new("Colour");
         private static readonly GUIContent _loadingRingSizeLabel = new("Size", "Diameter of the ring, in points on iOS and dp on Android.");
         private static readonly GUIContent _loadingRingGapLabel = new("Gap", "Space between the icon and the ring, in points on iOS and dp on Android.");
+        private static readonly GUIContent _diagnosisTitle = new("Diagnosis");
+        private static readonly GUIContent _playableScenesLabel = new("Playable Scenes", "The scenes of the first playable screen, loaded after the first scene of the build, such as through Addressables: the diagnosis checks their content with the content of the first scene. Empty, it checks the first scene of the build only.");
+        private static readonly GUIContent _diagnosisOnBuildLabel = new("Check Before Builds", "Runs the diagnosis before each Android and iOS build: a warning in the console for each warning, a log for each info.");
+        private static readonly GUIContent _thresholdsTitle = new("Thresholds");
+        private static readonly GUIContent _preloadedAndResourcesLabel = new("Preloaded and Resources (MB)", "Size of the Preloaded Assets and of the content of the Resources folders together, dependencies included, above which the diagnosis warns.");
+        private static readonly GUIContent _firstSceneLabel = new("First Scene (MB)", "Size of the content of the first scene of the build above which the diagnosis warns: a small boot scene loads at once.");
+        private static readonly GUIContent _textureSizeLabel = new("Texture Size (px)", "Largest size of a texture on Android or iOS, set by its Max Size, above which the diagnosis warns.");
+        private static readonly GUIContent _listedAssetsLabel = new("Listed Assets", "Number of assets listed, largest first, in each list of assets of the diagnosis.");
+        private static readonly GUIContent _openDiagnosisLabel = new("Open the Diagnosis", "Opens Window › Analysis › Startup Diagnostics on its Diagnosis tab.");
+        private static readonly int[] _textureSizes = { 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384 };
+        private static readonly GUIContent[] _textureSizeNames = Array.ConvertAll(_textureSizes, size => new GUIContent(size.ToString()));
 
         private SerializedObject _settings;
         private GUIStyle _pageStyle;
         private string _iconState;
         private string _iconIssue;
 
-        private StartupDiagnosticsSettingsProvider() : base(PATH, SettingsScope.Project, new[] { "startup", "launch screen", "splash", "icon", "loading" })
+        private StartupDiagnosticsSettingsProvider() : base(PATH, SettingsScope.Project, new[] { "startup", "launch screen", "splash", "icon", "loading", "diagnosis", "playable scenes", "thresholds" })
         {
         }
 
@@ -71,6 +83,8 @@ namespace Javienne.StartupDiagnostics
                     EditorGUILayout.HelpBox("Off: the builds have the launch screens of Unity, and the first scene draws its first frame as it is.", MessageType.None);
                 }
 
+                EditorGUILayout.Space();
+                DrawDiagnosis();
                 if (EditorGUI.EndChangeCheck())
                 {
                     _settings.ApplyModifiedProperties();
@@ -117,6 +131,35 @@ namespace Javienne.StartupDiagnostics
             }
 
             EditorGUILayout.HelpBox("Before each iOS build, the launch screen of iOS in the Player Settings is set to this icon at 192 points over the background colour (Image and background, constant size). Android builds get their splash screen from the same icon. The first scene shows the launch screen until the end of the start: call StartupTimeline.DeferEnd in that scene, or the first frame ends the start and the launch screen never shows.", MessageType.Info);
+        }
+
+        private void DrawDiagnosis()
+        {
+            EditorGUILayout.LabelField(_diagnosisTitle, EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(_settings.FindProperty("_playableScenes"), _playableScenesLabel, true);
+            EditorGUILayout.PropertyField(_settings.FindProperty("_diagnosisOnBuild"), _diagnosisOnBuildLabel);
+            EditorGUILayout.LabelField(_thresholdsTitle);
+            EditorGUI.indentLevel++;
+            DrawPositive(_settings.FindProperty("_preloadedAndResourcesMegabytes"), _preloadedAndResourcesLabel);
+            DrawPositive(_settings.FindProperty("_firstSceneMegabytes"), _firstSceneLabel);
+            var textureSize = _settings.FindProperty("_textureSize");
+            textureSize.intValue = EditorGUILayout.IntPopup(_textureSizeLabel, textureSize.intValue, _textureSizeNames, _textureSizes);
+            var listedAssets = _settings.FindProperty("_listedAssets");
+            EditorGUILayout.PropertyField(listedAssets, _listedAssetsLabel);
+            if (listedAssets.intValue < 1)
+            {
+                listedAssets.intValue = 1;
+            }
+
+            EditorGUI.indentLevel--;
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(_openDiagnosisLabel, GUILayout.ExpandWidth(false)))
+                {
+                    StartupMeasureWindow.OpenDiagnosis();
+                }
+            }
         }
 
         private static void DrawPositive(SerializedProperty property, GUIContent label)

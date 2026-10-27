@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Javienne.StartupDiagnostics
@@ -5,6 +6,7 @@ namespace Javienne.StartupDiagnostics
     /// <summary>
     ///     What one check of the diagnosis found, with the section of the optimization guide that explains it.
     /// </summary>
+    [Serializable]
     internal sealed class DiagnosisResult
     {
         /// <summary>
