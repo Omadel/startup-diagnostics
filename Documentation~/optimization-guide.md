@@ -83,6 +83,26 @@ From the start of the process to `scripts_start`: 0.55 s on the Pixel 6 and 0.36
 
 **In Rouflac.** The capture of the Pixel 6 shows 41 ms for the device discovery of the Input System (39 devices, sensors included) and 76 ms for the initialization of UI Toolkit. Not tried.
 
+### Create only the input devices the game uses
+
+**What it does.** Before the first scene, the Input System creates a device for each input that the system reports, sensors included, unless its settings list the devices the game supports.
+
+**How.** In **Project Settings › Input System Package**, add the devices the game uses to **Supported Devices**, such as **Touchscreen** and **Gamepad**: the Input System ignores the others. Then check the input of the game on each platform.
+
+**Measure.** `first_scene_loaded`, and the device discovery of the Input System in a capture of the start.
+
+**In Rouflac.** The capture of the Pixel 6 shows 39 devices and 41 ms for their discovery. Not tried.
+
+### Unity services at launch
+
+**What it does.** Some services of Unity start with the game: Engine Diagnostics, the legacy Unity Analytics when its module is in the project and initializes on startup, and the hardware statistics. They ask the servers of Unity for their settings and write their events on the device.
+
+**How.** Turn off those the game does not need: **Diagnostics Data** in **Project Settings › Services › Diagnostics**; the module **Unity Analytics**, removed in **Package Manager › Built-in**, or its start, with `AnalyticsSettings.initializeOnStartup`; the hardware statistics, with `submitAnalytics: 0` in `ProjectSettings/ProjectSettings.asset`, which the inspector of Unity 6000.3 does not show.
+
+**Measure.** `scripts_start`, online and in airplane mode.
+
+**In Rouflac.** Turned off for privacy: no request to Unity is left at launch. Their cost on the start was not measured.
+
 ## The first scene
 
 From `scripts_start` to `first_scene_loaded`.
@@ -172,6 +192,16 @@ Marked by the game, for example `addressables_ready` once `Addressables.Initiali
 **Measure.** `addressables_ready`.
 
 **In Rouflac.** Binary catalog; not compared with JSON.
+
+### Release the content with the build
+
+**What it does.** With a remote catalog, the game downloads the catalog of the server and uses it at the next launches. When a build carries local bundles that this catalog does not know, because the local content changed and was built again without being released, the game no longer finds them: the playable scene no longer loads, from the second launch on. Not a slow start, but a broken one.
+
+**How.** Release the content with each build whose local content changed: the remote bundles and the catalog of the same content build go to the server before the build ships, such as with **Build & Release** of Cloud Content Delivery. The diagnosis compares the local content with the last content build of the active platform.
+
+**Measure.** Launch the build twice, online.
+
+**In Rouflac.** A build of changed local content, made without Build & Release, loaded its playable scene at the first launch, then no longer from the second one on.
 
 ## Loading the playable scene
 
