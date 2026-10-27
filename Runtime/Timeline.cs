@@ -21,6 +21,11 @@ namespace Javienne.StartupDiagnostics
         public bool IsEndDeferred { get; private set; }
 
         /// <summary>
+        ///     Whether the end of the start is near: it ends with the next frame or sooner, or has ended.
+        /// </summary>
+        public bool IsEndRequested { get; private set; }
+
+        /// <summary>
         ///     Whether the start has ended. Its timeline is complete: later milestones are left out.
         /// </summary>
         public bool IsEnded { get; private set; }
@@ -46,6 +51,17 @@ namespace Javienne.StartupDiagnostics
         }
 
         /// <summary>
+        ///     Records that the start ends with the next frame or sooner. Returns false if that was already recorded.
+        /// </summary>
+        public bool RequestEnd()
+        {
+            if (IsEndRequested) return false;
+
+            IsEndRequested = true;
+            return true;
+        }
+
+        /// <summary>
         ///     Records the last milestone and ends the start. Returns false, and records nothing, if the start had already
         ///     ended.
         /// </summary>
@@ -54,6 +70,7 @@ namespace Javienne.StartupDiagnostics
             if (IsEnded) return false;
 
             Mark(milestone, time);
+            IsEndRequested = true;
             IsEnded = true;
             return true;
         }

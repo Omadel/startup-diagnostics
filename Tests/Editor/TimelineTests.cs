@@ -95,6 +95,44 @@ namespace Javienne.StartupDiagnostics.Tests
             Assert.That(timeline.IsEndDeferred, Is.False);
         }
 
+        [Test]
+        public void RequestEnd_First_RecordsItOnceWithoutEndingTheStart()
+        {
+            var timeline = new Timeline();
+            timeline.DeferEnd();
+
+            var first = timeline.RequestEnd();
+            var second = timeline.RequestEnd();
+
+            Assert.That(first, Is.True);
+            Assert.That(second, Is.False);
+            Assert.That(timeline.IsEndRequested, Is.True);
+            Assert.That(timeline.IsEnded, Is.False);
+        }
+
+        [Test]
+        public void End_WithoutRequest_RequestsTheEndToo()
+        {
+            var timeline = new Timeline();
+            timeline.DeferEnd();
+
+            timeline.End("menu", 0.5);
+
+            Assert.That(timeline.IsEndRequested, Is.True);
+            Assert.That(timeline.RequestEnd(), Is.False);
+        }
+
+        [Test]
+        public void MarkFirstFrame_EndDeferred_LeavesTheEndUnrequested()
+        {
+            var timeline = new Timeline();
+            timeline.DeferEnd();
+
+            timeline.MarkFirstFrame(0.3);
+
+            Assert.That(timeline.IsEndRequested, Is.False);
+        }
+
         private static IEnumerable<string> Names(Timeline timeline)
         {
             return timeline.Milestones.Select(milestone => milestone.Key);

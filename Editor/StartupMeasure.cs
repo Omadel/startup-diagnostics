@@ -41,8 +41,9 @@ namespace Javienne.StartupDiagnostics
         // changes the start.
         internal const int PAUSE_BEFORE_LAUNCH_MILLISECONDS = 5000;
 
+        internal const string LOG_PREFIX = "[Startup Diagnostics]";
+
         private const string WORK_FOLDER = "Temp/StartupDiagnostics";
-        private const string LOG_PREFIX = "[Startup Diagnostics]";
         private const string PROGRESS_NAME = "Startup measure";
 
         private static readonly TimeSpan _gitTimeout = TimeSpan.FromSeconds(10);

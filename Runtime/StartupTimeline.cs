@@ -57,6 +57,24 @@ namespace Javienne.StartupDiagnostics
         public static bool IsEnded => _timeline.IsEnded;
 
         /// <summary>
+        ///     Whether the start goes on after the first frame of the first scene, until <see cref="End" />.
+        /// </summary>
+        internal static bool IsEndDeferred => _timeline.IsEndDeferred;
+
+        /// <summary>
+        ///     Whether the start ends with the next frame or sooner, or has ended: <see cref="End" /> or
+        ///     <see cref="EndAfterRenderingAsync" /> was called, or the scene of <see cref="EndAtFirstFrameAsync(AsyncOperation, string, string)" />
+        ///     is loaded.
+        /// </summary>
+        internal static bool IsEndRequested => _timeline.IsEndRequested;
+
+        /// <summary>
+        ///     Raised once, as the end of the start is requested (<see cref="IsEndRequested" />): the launch screen hides
+        ///     then, so that the frame that ends the start shows the game.
+        /// </summary>
+        internal static event Action EndRequested;
+
+        /// <summary>
         ///     The time of the milestones, in seconds, on a monotonic clock of the system. Not
         ///     <see cref="Time.realtimeSinceStartupAsDouble" />, which goes back during the start (seen on iOS): a milestone
         ///     recorded before the first scene loads would come after later ones.
@@ -97,6 +115,7 @@ namespace Javienne.StartupDiagnostics
         /// </summary>
         public static void End(string milestone)
         {
+            RequestEnd();
             if (!_timeline.End(milestone, Now))
             {
                 Debug.LogWarning($"{LOG_PREFIX} The start has already ended, {milestone} is left out. To end it after the first frame, call {nameof(StartupTimeline)}.{nameof(DeferEnd)} before that frame.");
@@ -111,6 +130,7 @@ namespace Javienne.StartupDiagnostics
         /// </summary>
         public static async Awaitable EndAfterRenderingAsync(string milestone)
         {
+            RequestEnd();
             await AfterRendering.WaitAsync();
             End(milestone);
         }
@@ -127,6 +147,7 @@ namespace Javienne.StartupDiagnostics
                 await Awaitable.NextFrameAsync();
             }
 
+            RequestEnd();
             Mark(loadedMilestone);
             await EndAfterRenderingAsync(endMilestone);
         }
@@ -146,6 +167,7 @@ namespace Javienne.StartupDiagnostics
 
             if (loading.Status != AsyncOperationStatus.Succeeded) return;
 
+            RequestEnd();
             Mark(loadedMilestone);
             await EndAfterRenderingAsync(endMilestone);
         }
@@ -183,6 +205,7 @@ namespace Javienne.StartupDiagnostics
         private static void StartOnLoad()
         {
             _timeline = new Timeline();
+            EndRequested = null;
 #if UNITY_EDITOR
             _playModeStart = Now;
 #endif
@@ -207,6 +230,14 @@ namespace Javienne.StartupDiagnostics
             if (_timeline.MarkFirstFrame(Now))
             {
                 Log();
+            }
+        }
+
+        private static void RequestEnd()
+        {
+            if (_timeline.RequestEnd())
+            {
+                EndRequested?.Invoke();
             }
         }
 
