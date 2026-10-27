@@ -2,7 +2,7 @@
 
 A Unity package that times the **cold start** of a game, from the start of the process to its first playable screen, on Android, iOS and in Play Mode.
 
-> Work in progress: this README covers the startup timeline, the measure on Android and iOS, from its window, a script or the command line, and the Profiler capture of the start. The launch screen and the optimization guide are coming in 1.0.0.
+> Work in progress: this README covers the startup timeline, the measure on Android and iOS, from its window, a script or the command line, the Profiler capture of the start and the launch screen. The optimization guide is coming in 1.0.0.
 
 ## Requirements
 
@@ -177,6 +177,28 @@ The timeline tells which step of the start is long; the Profiler tells what runs
 In the window, turn on **Profiler capture** under **New measure**, with the length of the capture; from a script, set `ProfilerCapture`. **Open in Profiler** loads the capture of the measure shown again.
 
 A development build starts slower than the game: the launch of the capture stays out of the cold launches and of the comparisons. Compare the share of each step, not its time. The capture code is compiled only in development builds, and records only when the measure asks for it.
+
+## The launch screen
+
+A start that takes long feels shorter when its first images follow one another without a jump: the launch screen of the OS, then the first frame of the game, then its first playable screen. The launch screen of the package shows the same icon, at the same place and the same size, from the launch screen of the OS to the end of the start, with a loading ring under it once the game draws its first frame.
+
+It is **off by default**. Turn it on in **Project Settings › Startup Diagnostics**:
+
+| Setting | |
+| --- | --- |
+| **Icon** | The image at the centre of the screen, drawn as it is, fitted in a square of 192 points on iOS and 192 dp on Android. A PNG or JPEG file. |
+| **Background** | The splash background colour of the Player Settings (**Splash Image › Background Color**), under the icon on every launch screen. |
+| **Loading Ring** | A ring that turns under the icon from the second frame of the first scene, with its colour, its diameter and its gap to the icon, in points on iOS and dp on Android. |
+
+What it does with each build:
+
+- **The first scene**: the build adds to it an object with its own camera, drawn over all the others, which shows the icon over the background colour from the first frame, then hides as the end of the start is requested: `End`, `EndAfterRenderingAsync`, or the scene of `EndAtFirstFrameAsync` loaded. The frame that ends the start shows the game. In Play Mode, the object is created before the first scene loads. Nothing to add to a scene.
+- **Android**: the splash screen of Android 12 and later shows the icon instead of being empty, and Unity's static splash view, which takes over until the first frame of the game, shows it too, at 192 dp for each screen density. The splash screen of the system goes away at once instead of fading its icon out.
+- **iOS**: before each build, the launch screen of the Player Settings is set to the icon at 192 points over the background colour (**Image and background (constant size)**, on iPhone and iPad). A change is logged in the console.
+
+The launch screen shows only while the start goes on after the first frame of the first scene: call `StartupTimeline.DeferEnd` in that scene, as a boot scene does before loading the game (see [Ending the start later](#ending-the-start-later)). Otherwise the first frame ends the start, and the game shows at once.
+
+Android 12 and later crop the icon to the shape of the icons of the device, a circle on Pixel phones: keep what shows inside the circle inscribed in the image. The settings page and the Android build warn when it does not.
 
 ## License
 
