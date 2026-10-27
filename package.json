@@ -2,7 +2,7 @@
   "name": "com.javienne.startup-diagnostics",
   "version": "1.0.0",
   "displayName": "Startup Diagnostics",
-  "description": "Times the cold start of a game, from the start of the process to its first playable screen, and logs it in one line on Android, iOS and in Play Mode.",
+  "description": "Times the cold start of a game, from the start of the process to its first playable screen, on Android, iOS and in Play Mode. Measures it on a device from the editor, captures the Profiler of the start, and keeps one launch screen until the first playable screen. With an optimization guide and a tutorial.",
   "unity": "6000.0",
   "keywords": [
     "startup",
