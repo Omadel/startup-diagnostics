@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89305aa391d1c5141bbe1628d930a2c5, type: 3}
+  m_Name: Startup Diagnostics
+  m_EditorClassIdentifier: Unity.Tutorials.Core.Editor::Unity.Tutorials.Core.Editor.TutorialContainer
+  Modified:
+    m_PersistentCalls:
+      m_Calls: []
+  ParentContainer: {fileID: 0}
+  OrderInView: 0
+  BackgroundImage: {fileID: 0}
+  Title:
+    m_Untranslated: Startup Diagnostics
+  Subtitle:
+    m_Untranslated: Measure and shorten the start of your game
+  Description:
+    m_Untranslated: Time the cold start of your game on a device, find its longest
+      step, and see what runs in it.
+  ProjectLayout: {fileID: 0}
+  Sections:
+  - OrderInView: 0
+    Heading:
+      m_Untranslated: Measure the start of your game
+    Text:
+      m_Untranslated: The startup timeline, a measure on a device, its results, what
+        to shorten, and a Profiler capture of the start.
+    Metadata: 
+    Url: 
+    Image: {fileID: 0}
+    Tutorial: {fileID: 11400000, guid: 6e847780711024b01b4b6453c9dbfd27, type: 2}
+  FaqEntries: []

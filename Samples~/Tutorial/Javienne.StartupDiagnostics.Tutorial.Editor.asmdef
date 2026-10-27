@@ -1,0 +1,27 @@
+{
+    "name": "Javienne.StartupDiagnostics.Tutorial.Editor",
+    "rootNamespace": "Javienne.StartupDiagnostics.Tutorial",
+    "references": [
+        "Javienne.StartupDiagnostics",
+        "Javienne.StartupDiagnostics.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "STARTUP_DIAGNOSTICS_TUTORIAL_FRAMEWORK"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.learn.iet-framework",
+            "expression": "5.0.0",
+            "define": "STARTUP_DIAGNOSTICS_TUTORIAL_FRAMEWORK"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -21,5 +21,12 @@
   "licensesUrl": "https://github.com/Omadel/startup-diagnostics/blob/main/LICENSE",
   "dependencies": {
     "com.unity.modules.androidjni": "1.0.0"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Tutorial",
+      "description": "An interactive tutorial in the editor: the startup timeline, a measure on a device, its results, what to shorten and a Profiler capture. Needs the Tutorial Framework (com.unity.learn.iet-framework 5.0 or later), to install first.",
+      "path": "Samples~/Tutorial"
+    }
+  ]
 }
