@@ -2,7 +2,11 @@
     "name": "Javienne.StartupDiagnostics.Editor",
     "rootNamespace": "Javienne.StartupDiagnostics",
     "references": [
-        "Javienne.StartupDiagnostics"
+        "Javienne.StartupDiagnostics",
+        "Unity.Addressables",
+        "Unity.Addressables.Editor",
+        "Unity.ResourceManager",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"
@@ -13,6 +17,22 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.addressables",
+            "expression": "1.0.0",
+            "define": "STARTUP_DIAGNOSTICS_ADDRESSABLES"
+        },
+        {
+            "name": "com.unity.addressables",
+            "expression": "2.0.0",
+            "define": "STARTUP_DIAGNOSTICS_ADDRESSABLES_2"
+        },
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "1.0.0",
+            "define": "STARTUP_DIAGNOSTICS_INPUT_SYSTEM"
+        }
+    ],
     "noEngineReferences": false
 }
