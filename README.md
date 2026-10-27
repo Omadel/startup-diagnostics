@@ -2,7 +2,7 @@
 
 A Unity package that times the **cold start** of a game, from the start of the process to its first playable screen, on Android, iOS and in Play Mode.
 
-> Work in progress: this README covers the startup timeline, the measure on Android and iOS, from its window, a script or the command line, the Profiler capture of the start, the launch screen and the tutorial. The optimization guide is coming in 1.0.0.
+It also shows what to shorten: the measure tells which step of the start takes longest, a Profiler capture tells what runs in it, and the [optimization guide](Documentation~/optimization-guide.md) gives the levers of each step, with the gains measured in a small mobile game.
 
 ## Requirements
 
@@ -177,6 +177,10 @@ The timeline tells which step of the start is long; the Profiler tells what runs
 In the window, turn on **Profiler capture** under **New measure**, with the length of the capture, then press **Capture**; from a script, set `ProfilerCapture`. **Open in Profiler** loads the capture of the measure shown again.
 
 A development build starts slower than the game: the launch of the capture stays out of the cold launches and of the comparisons. Compare the share of each step, not its time. The capture code is compiled only in development builds, and records only when the measure asks for it.
+
+## Shortening the start
+
+The [optimization guide](Documentation~/optimization-guide.md) goes through the steps of the start: engine initialization, the first scene, the first frame, Addressables, the loading of the playable scene, and the perceived wait. For each lever, it tells what the lever does, how to apply it, how to measure its effect, and what it gave in Rouflac, the game this package comes from: its start went from 2.28 to 1.44 s on a Pixel 6 and from 1.16 to 0.73 s on an iPad 11.
 
 ## The launch screen
 
