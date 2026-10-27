@@ -51,7 +51,7 @@ namespace Javienne.StartupDiagnostics
 
             cancellation.ThrowIfCancellationRequested();
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
-            var summary = Build(target, path, development ? BuildOptions.Development : BuildOptions.None).summary;
+            var summary = (await BuildOutOfPlayerLoopAsync(target, path, development ? BuildOptions.Development : BuildOptions.None)).summary;
             if (summary.result != BuildResult.Succeeded) throw new MeasureException($"The build failed ({summary.result}, {summary.totalErrors} errors): see the console.");
             if (!development && (summary.options & BuildOptions.Development) != 0) throw new MeasureException("The active build profile makes a development build, slower to start: turn Development Build off in it for the measure.");
             if (development && (summary.options & BuildOptions.Development) == 0) throw new MeasureException("The build is not a development build: the Profiler capture needs one.");
@@ -90,6 +90,28 @@ namespace Javienne.StartupDiagnostics
             }
 
             return name.ToString();
+        }
+
+        /// <summary>
+        ///     Builds at the next call of <see cref="EditorApplication.delayCall" />, out of the player loop: Unity refuses
+        ///     a build inside it, where its synchronization context may run the continuation of an await, such as the one
+        ///     that reaches the build ("A player build cannot be executed while inside the player loop").
+        /// </summary>
+        private static Task<BuildReport> BuildOutOfPlayerLoopAsync(BuildTarget target, string path, BuildOptions options)
+        {
+            var built = new TaskCompletionSource<BuildReport>();
+            EditorApplication.delayCall += () =>
+            {
+                try
+                {
+                    built.SetResult(Build(target, path, options));
+                }
+                catch (Exception exception)
+                {
+                    built.SetException(exception);
+                }
+            };
+            return built.Task;
         }
 
         private static BuildReport Build(BuildTarget target, string path, BuildOptions options)
