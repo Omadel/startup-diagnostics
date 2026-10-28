@@ -54,7 +54,7 @@ MonoBehaviour:
       Title:
         m_Untranslated: Measure the start
       Text:
-        m_Untranslated: 'Under <b>New measure</b>, choose the platform and the device,
+        m_Untranslated: 'In the <b>Measure</b> tab, under <b>New measure</b>, choose the platform and the device,
           keep <b>A new build</b>, then press <b>Measure</b>. Building needs the
           platform to be the active build target.
 

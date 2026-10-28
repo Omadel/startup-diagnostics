@@ -10,29 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ff771ccdf4150419d9ff4d342b069aae, type: 3}
-  m_Name: 6 Shorten the Start
+  m_Name: 6 Diagnose the Start
   m_EditorClassIdentifier: Unity.Tutorials.Core.Editor::Unity.Tutorials.Core.Editor.TutorialPage
   Title:
-    m_Untranslated: Shorten the longest step
+    m_Untranslated: Diagnose the start
   m_Paragraphs:
     m_Items:
     - m_Type: 0
       Title:
-        m_Untranslated: Shorten the longest step
+        m_Untranslated: Diagnose the start
       Text:
-        m_Untranslated: "Each step has its own levers:\n\n<b>scripts_start</b>: the
-          initialization of the engine, which grows with the size of the build, its
-          code and its preloaded assets.\n<b>first_scene_loaded</b>: the splash screen
-          of Unity when it shows (2.1 s in a new project), then the loading of the
-          first scene: keep it a small boot scene.\n<b>first_frame</b>: the Awake
-          and Start of the first scene, and its first rendering.\nYour own milestones
-          after them: Addressables, the loading of the playable scene.\n\nWhen the
-          start cannot get shorter, it can feel shorter: the launch screen of the
-          package shows the same icon from the launch screen of the OS to the first
-          playable screen, in <b>Project Settings \u203A Startup Diagnostics</b>.\n\nThe
-          <a href=\"https://github.com/Omadel/startup-diagnostics/blob/main/Documentation~/optimization-guide.md\">optimization
-          guide</a> describes each lever, how to apply it and how to measure its
-          effect."
+        m_Untranslated: 'The <b>Diagnosis</b> tab checks what weighs on the start, in the editor, without a device: the settings of the project, and the content of the first scene of the build and of your playable scenes. List the scenes of your first playable screen under <b>Playable Scenes</b>, in <b>Project Settings › Startup Diagnostics</b>.
+
+
+          A <b>Warning</b> has a clear fix whose effect is shown; an <b>Info</b> is a cost to look at. Each one says what it found and what to do, and lists what is in cause, such as the largest assets of a scene with the chain of references that pulls each one in. <b>Guide</b> opens its section of the optimization guide.
+
+
+          With the measure you just made, <b>the checks of its longest step come first</b>, and each one shows the share of its step in the start. Turn on <b>Check Before Builds</b> in the settings to get the warnings in the console before each Android and iOS build.'
       m_CodeSample: 
       m_PostInstructionImage: {fileID: 0}
       m_Tutorial: {fileID: 0}
@@ -50,8 +44,20 @@ MonoBehaviour:
       m_Criteria:
         m_Items: []
       m_MaskingSettings:
-        m_MaskingEnabled: 0
-        m_UnmaskedViews: []
+        m_MaskingEnabled: 1
+        m_UnmaskedViews:
+        - m_SelectorType: 1
+          m_ViewType:
+            m_TypeName: 
+          m_FocusEditorWindow: 0
+          m_EditorWindowType:
+            m_TypeName: Javienne.StartupDiagnostics.StartupMeasureWindow, Javienne.StartupDiagnostics.Editor,
+              Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+          m_AlternateEditorWindowTypes:
+            m_Items: []
+          m_MaskType: 0
+          m_MaskSizeModifier: 0
+          m_UnmaskedControls: []
       m_Summary: 
       m_Description: 
       m_InstructionBoxTitle: 
