@@ -21,11 +21,18 @@ namespace Javienne.StartupDiagnostics
         public const string JSON_CATALOG = "keep-the-catalog-binary";
         public const string BUNDLE_COMPRESSION = "compress-bundles-for-where-they-are";
         public const string REMOTE_CATALOG_CONTENT = "release-the-content-with-the-build";
+        public const string SMALL_BOOT_SCENE = "a-small-boot-scene";
+        public const string SCENE_CONTENT = "find-what-the-scene-drags-in";
+        public const string ANIMATION_COMPRESSION = "compress-animations";
+        public const string TEXTURE_SIZE = "limit-the-size-of-textures-per-platform";
+        public const string ONGUI = "disable-ongui-until-it-draws";
+        public const string FIRST_FRAME = "a-first-frame-like-the-launch-screen";
+        public const string UI_TOOLKIT = "ui-toolkit-in-the-first-scenes";
 
         /// <summary>
         ///     Every anchor that a check links to.
         /// </summary>
-        public static readonly string[] Anchors = { UNITY_SPLASH_SCREEN, PRELOADED_ASSETS_AND_RESOURCES, UNITY_SERVICES, INPUT_DEVICES, LAUNCH_SCREEN, CATALOG_UPDATE, JSON_CATALOG, BUNDLE_COMPRESSION, REMOTE_CATALOG_CONTENT };
+        public static readonly string[] Anchors = { UNITY_SPLASH_SCREEN, PRELOADED_ASSETS_AND_RESOURCES, UNITY_SERVICES, INPUT_DEVICES, LAUNCH_SCREEN, CATALOG_UPDATE, JSON_CATALOG, BUNDLE_COMPRESSION, REMOTE_CATALOG_CONTENT, SMALL_BOOT_SCENE, SCENE_CONTENT, ANIMATION_COMPRESSION, TEXTURE_SIZE, ONGUI, FIRST_FRAME, UI_TOOLKIT };
 
         /// <summary>
         ///     The address of a section of the guide in the installed version of the package.
