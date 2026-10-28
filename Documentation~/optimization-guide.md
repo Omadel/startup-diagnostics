@@ -93,6 +93,16 @@ From the start of the process to `scripts_start`: 0.55 s on the Pixel 6 and 0.36
 
 **In Rouflac.** The capture of the Pixel 6 shows 39 devices and 41 ms for their discovery. Not tried.
 
+### UI Toolkit in the first scenes
+
+**What it does.** The first active `UIDocument` sets up the runtime panel of UI Toolkit while its scene loads.
+
+**How.** If the start does not need UI Toolkit, enable the `UIDocument`s after the first playable screen, and show the start with a camera and a sprite, or with the launch screen of the package.
+
+**Measure.** The step of the scene that holds the `UIDocument`, and the markers of UI Toolkit in a capture of the start.
+
+**In Rouflac.** The capture of the Pixel 6 shows 76 ms for the initialization of UI Toolkit, though no scene of the start has a `UIDocument`: the cause was not found.
+
 ### Unity services at launch
 
 **What it does.** Some services of Unity start with the game: Engine Diagnostics, the legacy Unity Analytics when its module is in the project and initializes on startup, and the hardware statistics. They ask the servers of Unity for their settings and write their events on the device.
@@ -280,6 +290,16 @@ What it handles, for a game that would do it itself:
 - **Android** then shows the static splash view of Unity, from the first frame of the app (0.13 s on the Pixel 6) to the first frame of Unity. It draws the image `unity_static_splash` at its size in pixels, whatever the density of the screen: one image per density.
 - The splash screen of the system fades its icon out, then fades the app in: the icon blinks. Removing the splash screen at once in its exit listener (`SplashScreenView.remove`) keeps the image still.
 - **The first scene** shows the same icon at the same size: 192 points times the scale of the view on iOS, 192 dp times the density on Android. A camera whose culling mask renders no layer shows only its background colour.
+
+### A first frame like the launch screen
+
+**What it does.** Without the launch screen of the package, the first frame of the first scene follows the launch screen of the system directly. A camera that clears to another colour or to the skybox, or that renders no layer and so shows its background without the icon, makes the screen jump.
+
+**How.** Clear the camera of the first scene to the splash background colour of the Player Settings, and draw the icon of the launch screen at the same place and size. Or turn on the launch screen of the package, which does both.
+
+**Measure.** A screen recording, read frame by frame.
+
+**In Rouflac.** A camera of `Boot` whose culling mask rendered no layer showed only its background colour, without the icon.
 
 ### An indicator from the second frame
 
