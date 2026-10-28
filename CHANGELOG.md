@@ -2,6 +2,24 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the package uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-10-28
+
+### Added
+
+- Diagnosis of what weighs on the start, in the editor, in the new **Diagnosis** tab of the window: each check gives a warning, an info or a pass, says what it found and what to do, lists what is in cause, and links to its section of the optimization guide.
+  - Settings of the project: the splash screen of Unity, the Preloaded Assets and the Resources folders with the estimated size of their dependencies, the launch screens of the OS, the Unity services at launch, and the devices of the Input System when it is installed.
+  - Addressables, when installed: the catalog update at startup, the compression of the local bundles, the JSON catalog, and the local content changed since the last content build with a remote catalog, from a record that the package writes after each content build.
+  - Content of the scenes of the start, the first scene of the build and the playable scenes of the settings, each opened as a preview scene: the size of what each one pulls in, with the chain of references to its largest assets, real sizes from the build layout of Addressables 2 when there is one; animations without compression; textures larger than a threshold on Android or iOS; active components with `OnGUI` in the builds; active `UIDocument`s; the first frame of the first scene without the launch screen of the package.
+  - With a measure of the start, the checks of its longest step come first, and each check shows the share of its step.
+- Diagnosis settings in *Project Settings › Startup Diagnostics*: the playable scenes, the thresholds, and **Check Before Builds**, off by default, which runs the diagnosis before each Android and iOS build and logs its warnings and infos.
+- Guide sections for the new checks: the input devices, the Unity services at launch, UI Toolkit in the first scenes, releasing the content with the build, and a first frame like the launch screen.
+- A page of the tutorial on the diagnosis, between the results of a measure and what to shorten.
+- Edit Mode tests for the checks, the reading of paths and sizes, the chains of references, the changes of the local content, the editor-only `OnGUI`, the times of the steps of a measure and the order of the results.
+
+### Changed
+
+- The window has two tabs, **Measure**, with everything it showed, and **Diagnosis**.
+
 ## [1.0.0] - 2026-10-27
 
 ### Added

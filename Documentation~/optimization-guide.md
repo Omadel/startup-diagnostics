@@ -18,8 +18,9 @@ Rouflac is a small mobile game on Unity 6000.3, with URP and Addressables, measu
 
 1. Measure the start on a device, from a non-development build: see [Measuring the start on a device](../README.md#measuring-the-start-on-a-device).
 2. In the window, the **Step** column shows the share of each step in the start: begin with the longest bar, and its chapter below.
-3. Capture the Profiler of the start to see what runs in that step: see [Capturing the Profiler of the start](../README.md#capturing-the-profiler-of-the-start). A development build is slower than the game: compare the share of each marker, not its time.
-4. Apply one lever, then measure again. The window compares each milestone with the previous measure on the same device, and flags one more than 10% slower.
+3. Run the diagnosis, in the **Diagnosis** tab: it checks the settings of the project and the scenes of the start for what the levers of this guide look at, puts the checks of the longest step first, and links each one to its section here. See [Diagnosing the start](../README.md#diagnosing-the-start).
+4. Capture the Profiler of the start to see what runs in that step: see [Capturing the Profiler of the start](../README.md#capturing-the-profiler-of-the-start). A development build is slower than the game: compare the share of each marker, not its time.
+5. Apply one lever, then measure again. The window compares each milestone with the previous measure on the same device, and flags one more than 10% slower.
 
 The package marks three milestones. Mark the steps of your own start with `StartupTimeline.Mark`, for example when your content is ready, and end the start on your first playable screen (see [Ending the start later](../README.md#ending-the-start-later)): each lever then shows in its own step.
 

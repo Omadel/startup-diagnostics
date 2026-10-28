@@ -2,12 +2,12 @@
 
 A Unity package that times the **cold start** of a game, from the start of the process to its first playable screen, on Android, iOS and in Play Mode.
 
-It also shows what to shorten: the measure tells which step of the start takes longest, a Profiler capture tells what runs in it, and the [optimization guide](Documentation~/optimization-guide.md) gives the levers of each step, with the gains measured in a small mobile game.
+It also shows what to shorten: the measure tells which step of the start takes longest, a Profiler capture tells what runs in it, the diagnosis checks in the editor what weighs on the start in the settings of the project and in its first scenes, and the [optimization guide](Documentation~/optimization-guide.md) gives the levers of each step, with the gains measured in a small mobile game.
 
 ## Requirements
 
 - Unity 6000.0 or later. The package is verified on Unity 6000.3.
-- No other package. With Addressables installed, the timeline can also end at the first frame of a scene that Addressables loads.
+- No other package. With Addressables installed, the timeline can also end at the first frame of a scene that Addressables loads, and the diagnosis checks the settings and the local content of Addressables. With the Input System installed, the diagnosis checks its devices.
 
 ## Installation
 
@@ -92,7 +92,7 @@ On iOS, the measure needs a Mac with Xcode, and a device that trusts the Mac wit
 
 ### From the window
 
-Open **Window › Analysis › Startup Diagnostics**.
+Open **Window › Analysis › Startup Diagnostics**, tab **Measure**.
 
 Under **New measure**, choose the platform, the device (the first available, or one of the devices listed), the number of cold launches, and what to measure:
 
@@ -178,6 +178,58 @@ In the window, turn on **Profiler capture** under **New measure**, with the leng
 
 A development build starts slower than the game: the launch of the capture stays out of the cold launches and of the comparisons. Compare the share of each step, not its time. The capture code is compiled only in development builds, and records only when the measure asks for it.
 
+## Diagnosing the start
+
+The diagnosis checks in the editor, without a device, what weighs on the start: the settings of the project, and the content of the scenes of the start. Open **Window › Analysis › Startup Diagnostics**, tab **Diagnosis**: it runs the first time the tab is chosen, and again with **Run**.
+
+Each check gives a level:
+
+- **Warning**: the fix is clear and its effect is shown, measured in Rouflac or in a new project, or documented by Unity; or the start breaks;
+- **Info**: a cost found without a lever tried, or a list to read;
+- **Passed**: nothing to change. The passed checks stay folded.
+
+Each warning and info tells what it found, why it matters to the start and what to do, lists what is in cause (an asset there selects it in the Project window), and links to its section of the [optimization guide](Documentation~/optimization-guide.md) with **Guide**. With a measure of the start, the checks of its longest step come first, and each check shows the share of its step: the newest measure that succeeded with cold launches, of the active build target first.
+
+| Check | Level | What it looks at |
+| --- | --- | --- |
+| Splash screen of Unity | Warning | Show Splash Screen on in the Player Settings. |
+| Preloaded Assets and Resources | Info, Warning above the threshold | The Preloaded Assets of the Player Settings and the content of the Resources folders that goes into the builds, with the estimated size of each one and of its dependencies. |
+| Launch screens of the OS | Warning | Without the launch screen of the package: the default launch screen of Unity on iOS, no static splash image on Android. |
+| Unity services at launch | Info | Engine Diagnostics, the legacy Unity Analytics initialized on startup, the hardware statistics. |
+| Devices of the Input System | Info | No Supported Devices in the settings of the Input System: it creates every device the system reports. |
+| Catalog update at startup | Warning | A remote catalog that Addressables checks for while it initializes. |
+| Compression of the local bundles | Warning | Groups loaded from the app and compressed with LZMA. |
+| Format of the catalog | Info | Enable Json Catalog on in the settings of Addressables 2. |
+| Local content and remote catalog | Warning | Local content changed since the last content build, with a remote catalog: a build that builds it again without releasing the content no longer loads its scenes from the second launch on. |
+| Content of each scene | Info, Warning above the threshold for the first scene | The size of what the scene pulls in, and its largest assets, each with the chain of references that pulls it in, through components and fields, prefab instances and material properties. |
+| Compression of animations | Warning | Models whose clips the Animator controllers of the scenes use, imported without animation compression. |
+| Size of textures | Warning | Textures of the scenes larger than the threshold once imported for Android or iOS. |
+| OnGUI in the scenes of the start | Warning | Components active when their scene loads with an `OnGUI` method in the builds: the first frame then loads the skin of IMGUI. |
+| UI Toolkit in the scenes of the start | Info | `UIDocument`s active when their scene loads. |
+| First frame of the first scene | Warning | Without the launch screen of the package: the camera of the first scene clears to another colour than the splash background, to the skybox, or renders no layer. |
+
+The scenes of the start are the first enabled scene of the build, and the **Playable Scenes** of the settings: the scenes of the first playable screen, loaded after it, such as through Addressables. Each one opens as a preview scene, out of the scenes open in the editor, and its assets load to be measured: a run takes about a second in a small game.
+
+The sizes come from the build layout of the last content build of Addressables 2 for the assets of its bundles, when **Debug Build Layout** is on in the preferences of Addressables: their uncompressed size in the bundles. The other sizes are estimated in the editor: textures in their format for the active build target, the rest by its size in memory in the editor.
+
+The check of the local content compares it with a record that the package writes after each content build of Addressables, **Build & Release** included, in `Library/StartupDiagnostics/Content`: it shows once a content build ran with the package installed. The content state of Addressables cannot serve, as it lists only the groups that prevent updates.
+
+### Settings
+
+In **Project Settings › Startup Diagnostics**, under **Diagnosis**:
+
+| Setting | |
+| --- | --- |
+| **Playable Scenes** | The scenes of the first playable screen, checked with the first scene of the build. Empty, the diagnosis checks the first scene only. |
+| **Check Before Builds** | Off by default. Runs the diagnosis before each Android and iOS build: a warning in the console for each warning, a log for each info. |
+| **Thresholds** | The size of the Preloaded Assets and Resources together (1 MB), of the content of the first scene (1 MB), the largest size of a texture (1024 px), and the number of assets listed in each list (10). |
+
+### Limits
+
+- An `OnGUI` method counts unless the source of the type that declares it puts it in a block compiled in the editor only, such as `#if UNITY_EDITOR`; a type without source counts as having one.
+- The clips counted are those of the Animator controllers that a scene pulls in: clips used through Timeline or a field of a script are not seen.
+- The estimated sizes are orders of magnitude; the build layout gives the real ones.
+
 ## Shortening the start
 
 The [optimization guide](Documentation~/optimization-guide.md) goes through the steps of the start: engine initialization, the first scene, the first frame, Addressables, the loading of the playable scene, and the perceived wait. For each lever, it tells what the lever does, how to apply it, how to measure its effect, and what it gave in Rouflac, the game this package comes from: its start went from 2.28 to 1.44 s on a Pixel 6 and from 1.16 to 0.73 s on an iPad 11.
@@ -206,7 +258,7 @@ Android 12 and later crop the icon to the shape of the icons of the device, a ci
 
 ## The tutorial
 
-An interactive tutorial walks through the package in the editor: the startup timeline, ending the start on the first playable screen, a measure on a device, its results, what to shorten, and a Profiler capture. It runs on Unity's Tutorial Framework, which the package does not depend on:
+An interactive tutorial walks through the package in the editor: the startup timeline, ending the start on the first playable screen, a measure on a device, its results, the diagnosis, what to shorten, and a Profiler capture. It runs on Unity's Tutorial Framework, which the package does not depend on:
 
 1. Install the **Tutorial Framework** (`com.unity.learn.iet-framework`, 5.0 or later) from the Package Manager.
 2. In the Package Manager, select **Startup Diagnostics**, then import the **Tutorial** sample from the **Samples** tab.
