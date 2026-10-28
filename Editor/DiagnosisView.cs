@@ -9,7 +9,8 @@ namespace Javienne.StartupDiagnostics
 {
     /// <summary>
     ///     The Diagnosis tab of <see cref="StartupMeasureWindow" />: runs the diagnosis on demand, then shows its warnings
-    ///     and infos, each with what is in cause and a link to its section of the guide, and the passed checks folded.
+    ///     and infos, each with what is in cause and a link to its section of the guide, and the passed checks folded. With
+    ///     a measure of the start, the checks of its longest step come first, and each step shows its share of the start.
     /// </summary>
     internal sealed class DiagnosisView : VisualElement
     {
@@ -23,6 +24,7 @@ namespace Javienne.StartupDiagnostics
         private readonly DiagnosisRun _run;
         private readonly Label _summary;
         private readonly HelpBox _emptyBox;
+        private readonly Label _longestStep;
         private readonly ScrollView _results;
 
         /// <summary>
@@ -43,6 +45,8 @@ namespace Javienne.StartupDiagnostics
 
             _emptyBox = new HelpBox("Run the diagnosis to check what weighs on the start: the settings of the project, and the content of the first scene of the build and of the playable scenes.", HelpBoxMessageType.Info) { style = { marginLeft = 4, marginRight = 4, marginTop = 6 } };
             Add(_emptyBox);
+            _longestStep = new Label { style = { whiteSpace = WhiteSpace.Normal, marginLeft = 6, marginRight = 6, marginTop = 6, marginBottom = 2 } };
+            Add(_longestStep);
             _results = new ScrollView { style = { flexGrow = 1 } };
             Add(_results);
             Show();
@@ -61,23 +65,36 @@ namespace Javienne.StartupDiagnostics
             Show();
         }
 
+        /// <summary>
+        ///     Shows the results again, in the order that the newest measure gives.
+        /// </summary>
+        public void Refresh()
+        {
+            Show();
+        }
+
         private void Show()
         {
             _results.Clear();
             _emptyBox.style.display = HasRun ? DisplayStyle.None : DisplayStyle.Flex;
+            _longestStep.style.display = HasRun ? DisplayStyle.Flex : DisplayStyle.None;
             _summary.text = HasRun ? $"{DiagnosisReport.GetSummary(_run.Results)}, checked {FormatRunAt(_run.RunAt)}" : string.Empty;
+            if (!HasRun) return;
+
+            var times = StepTimes.FromNewest(MeasureHistory.Load(StartupMeasure.RESULTS_FOLDER), EditorUserBuildSettings.activeBuildTarget.ToString());
+            _longestStep.text = DiagnosisReport.DescribeLongestStep(times, times == null ? null : MeasureHistory.FormatStartedAt(times.Measure, TimeZoneInfo.Local));
             var passed = new Foldout { value = false, style = { marginLeft = 4, marginRight = 4, marginTop = 6 } };
             var passedCount = 0;
-            foreach (var result in _run.Results)
+            foreach (var result in DiagnosisReport.Sort(_run.Results, times?.Longest))
             {
                 if (result.Level == DiagnosisLevel.Passed)
                 {
-                    passed.Add(CreateCard(result));
+                    passed.Add(CreateCard(result, times));
                     passedCount++;
                 }
                 else
                 {
-                    _results.Add(CreateCard(result));
+                    _results.Add(CreateCard(result, times));
                 }
             }
 
@@ -87,14 +104,15 @@ namespace Javienne.StartupDiagnostics
             _results.Add(passed);
         }
 
-        private static VisualElement CreateCard(DiagnosisResult result)
+        private static VisualElement CreateCard(DiagnosisResult result, StepTimes times)
         {
             var color = GetColor(result.Level);
             var card = new VisualElement { style = { marginLeft = 4, marginRight = 4, marginTop = 4, paddingLeft = 6, paddingRight = 4, paddingTop = 3, paddingBottom = 5, backgroundColor = _cardColor, borderLeftWidth = 3, borderLeftColor = color } };
             var header = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = Align.Center } };
             header.Add(new Label(GetLevelName(result.Level)) { style = { color = color, unityFontStyleAndWeight = FontStyle.Bold, minWidth = 56 } });
             header.Add(new Label(result.Title) { enableRichText = false, style = { flexGrow = 1, flexShrink = 1, unityFontStyleAndWeight = FontStyle.Bold, whiteSpace = WhiteSpace.Normal } });
-            header.Add(new Label(DiagnosisReport.GetStepName(result.Step)) { tooltip = DiagnosisReport.GetStepRange(result.Step), style = { opacity = 0.7f, marginRight = 4 } });
+            var isLongest = times != null && result.Step == times.Longest;
+            header.Add(new Label(DiagnosisReport.GetStepLabel(result.Step, times)) { tooltip = DiagnosisReport.GetStepRange(result.Step), style = { opacity = isLongest ? 1 : 0.7f, unityFontStyleAndWeight = isLongest ? FontStyle.Bold : FontStyle.Normal, marginRight = 4 } });
             var url = DiagnosisGuide.GetUrl(result.GuideSection);
             header.Add(new Button(() => Application.OpenURL(url)) { text = "Guide", tooltip = $"Opens the section of the optimization guide about this check: {url}" });
             card.Add(header);

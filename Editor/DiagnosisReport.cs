@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -16,7 +17,50 @@ namespace Javienne.StartupDiagnostics
         /// </summary>
         public static List<DiagnosisResult> Sort(IEnumerable<DiagnosisResult> results)
         {
-            return results.OrderByDescending(result => result.Level).ThenBy(result => result.Step).ToList();
+            return Sort(results, null);
+        }
+
+        /// <summary>
+        ///     The results as <see cref="Sort(IEnumerable{DiagnosisResult})" /> orders them, the warnings and infos of the
+        ///     longest step of a measure first.
+        /// </summary>
+        public static List<DiagnosisResult> Sort(IEnumerable<DiagnosisResult> results, StartupStep? longest)
+        {
+            return results.OrderBy(result => result.Level == DiagnosisLevel.Passed).ThenBy(result => result.Step != longest).ThenByDescending(result => result.Level).ThenBy(result => result.Step).ToList();
+        }
+
+        /// <summary>
+        ///     The step and its share of the start, such as <c>First scene · 12%</c>; the step alone without times or for a
+        ///     step that is not timed.
+        /// </summary>
+        public static string GetStepLabel(StartupStep step, StepTimes times)
+        {
+            var share = times?.GetShare(step);
+            return share.HasValue ? $"{GetStepName(step)} · {FormatShare(share.Value)}" : GetStepName(step);
+        }
+
+        /// <summary>
+        ///     What the diagnosis takes from a measure: its longest step, how long it took and its share of the start; or how
+        ///     to get one without a measure.
+        /// </summary>
+        public static string DescribeLongestStep(StepTimes times, string measureDate)
+        {
+            if (times == null) return "No measure of the start yet: measure it in the Measure tab, and the checks of its longest step come first.";
+
+            var measure = times.Measure;
+            var step = times.Longest;
+            var milliseconds = times.GetMilliseconds(step) ?? 0;
+            return $"Longest step of the last measure, {measure.DeviceModel} on {measureDate}: {GetStepName(step).ToLowerInvariant()}, {FormatSeconds(milliseconds)} of {FormatSeconds(times.Total)} ({FormatShare(milliseconds / times.Total)}). Its checks come first.";
+        }
+
+        private static string FormatShare(double share)
+        {
+            return (share * 100).ToString("0", CultureInfo.InvariantCulture) + "%";
+        }
+
+        private static string FormatSeconds(double milliseconds)
+        {
+            return (milliseconds / 1000).ToString("0.00", CultureInfo.InvariantCulture) + " s";
         }
 
         public static string GetStepName(StartupStep step)

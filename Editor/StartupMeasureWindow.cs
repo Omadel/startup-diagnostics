@@ -220,12 +220,19 @@ namespace Javienne.StartupDiagnostics
         }
 
         /// <summary>
-        ///     Keeps the tab across domain reloads, and runs the diagnosis the first time its tab is chosen.
+        ///     Keeps the tab across domain reloads, and runs the diagnosis the first time its tab is chosen, or shows it again
+        ///     in the order of the newest measure.
         /// </summary>
         private void OnTabChanged(Tab previous, Tab current)
         {
             _tab = _tabs.selectedTabIndex;
-            if (_tab == DIAGNOSIS_TAB && !_diagnosisView.HasRun)
+            if (_tab != DIAGNOSIS_TAB) return;
+
+            if (_diagnosisView.HasRun)
+            {
+                _diagnosisView.Refresh();
+            }
+            else
             {
                 _diagnosisView.Run();
             }
